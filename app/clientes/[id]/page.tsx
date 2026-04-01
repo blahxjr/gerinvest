@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { pool } from "../../../lib/db";
 
 type PageProps = {
@@ -112,9 +113,14 @@ export default async function ClienteDetalhePage({ params }: PageProps) {
     : null;
 
   return (
-    <div style={{ maxWidth: "1120px" }}>
+    <div className="main-card" style={{ maxWidth: "1120px" }}>
       {/* HERO / RESUMO ESTILO B3 */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-sky-300">Cliente</h1>
+        <p className="text-slate-300">Visualização detalhada e histórico do cliente.</p>
+      </div>
       <div
+        className="panel"
         style={{
           marginBottom: "24px",
           padding: "20px 24px",
@@ -207,149 +213,93 @@ export default async function ClienteDetalhePage({ params }: PageProps) {
       </div>
 
       {/* CONTAS DO CLIENTE */}
-      <div
-        style={{
-          marginTop: "8px",
-          background: "#fff",
-          borderRadius: "12px",
-          padding: "16px",
-          border: "1px solid #e5e7eb",
-          overflowX: "auto",
-        }}
-      >
-        <div
-          style={{
-            marginBottom: "8px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "1rem",
-              fontWeight: 600,
-              color: "#111827",
-            }}
-          >
-            Contas do cliente
-          </h2>
-          <a
+      <div className="panel">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-sky-300">Contas do cliente</h2>
+          <Link
             href="/contas/new"
-            style={{
-              padding: "6px 12px",
-              borderRadius: "999px",
-              background: "#2563eb",
-              color: "#fff",
-              fontSize: "0.85rem",
-              fontWeight: 500,
-              textDecoration: "none",
-            }}
+            className="inline-flex items-center rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-400"
           >
             Nova conta
-          </a>
+          </Link>
         </div>
 
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
-              <th style={{ padding: "8px" }}>Apelido</th>
-              <th style={{ padding: "8px" }}>Número</th>
-              <th style={{ padding: "8px" }}>Instituição</th>
-              <th style={{ padding: "8px" }}>Criado em</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contas.map((conta: Conta) => (
-              <tr key={conta.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                <td style={{ padding: "8px" }}>{conta.apelido || "-"}</td>
-                <td style={{ padding: "8px" }}>{conta.numero_conta}</td>
-                <td style={{ padding: "8px" }}>{conta.instituicao_nome}</td>
-                <td style={{ padding: "8px" }}>
-                  {new Date(conta.created_at).toLocaleString("pt-BR")}
-                </td>
-              </tr>
-            ))}
-
-            {contas.length === 0 && (
+        <div className="table-wrapper">
+          <table className="modern-table">
+            <thead>
               <tr>
-                <td colSpan={4} style={{ padding: "12px", textAlign: "center" }}>
-                  Nenhuma conta cadastrada para este cliente.
-                </td>
+                <th>Apelido</th>
+                <th>Número</th>
+                <th>Instituição</th>
+                <th>Criado em</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {contas.length > 0 ? (
+                contas.map((conta: Conta) => (
+                  <tr key={conta.id}>
+                    <td>{conta.apelido || "-"}</td>
+                    <td>{conta.numero_conta}</td>
+                    <td>{conta.instituicao_nome}</td>
+                    <td>{new Date(conta.created_at).toLocaleString("pt-BR")}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} className="text-center text-slate-400 py-4">
+                    Nenhuma conta cadastrada para este cliente.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* POSIÇÕES DO CLIENTE */}
-      <div
-        style={{
-          marginTop: "24px",
-          background: "#fff",
-          borderRadius: "12px",
-          padding: "16px",
-          border: "1px solid #e5e7eb",
-          overflowX: "auto",
-        }}
-      >
-        <div
-          style={{
-            marginBottom: "8px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "1rem",
-              fontWeight: 600,
-              color: "#111827",
-            }}
-          >
-            Posições do cliente
-          </h2>
+      <div className="panel">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-sky-300">Posições do cliente</h2>
         </div>
 
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
-              <th style={{ padding: "8px" }}>Data</th>
-              <th style={{ padding: "8px" }}>Conta</th>
-              <th style={{ padding: "8px" }}>Código</th>
-              <th style={{ padding: "8px" }}>Ativo</th>
-              <th style={{ padding: "8px" }}>Tipo</th>
-              <th style={{ padding: "8px" }}>Quantidade</th>
-              <th style={{ padding: "8px" }}>Preço</th>
-              <th style={{ padding: "8px" }}>Valor líquido</th>
-            </tr>
-          </thead>
-          <tbody>
-            {posicoes.map((p: Posicao) => (
-              <tr key={p.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                <td style={{ padding: "8px" }}>
-                  {new Date(p.data_referencia).toLocaleDateString("pt-BR")}
-                </td>
-                <td style={{ padding: "8px" }}>{p.conta}</td>
-                <td style={{ padding: "8px" }}>{p.codigo_negociacao || "-"}</td>
-                <td style={{ padding: "8px" }}>{p.nome_produto}</td>
-                <td style={{ padding: "8px" }}>{p.tipo_investimento || "-"}</td>
-                <td style={{ padding: "8px" }}>{p.quantidade}</td>
-                <td style={{ padding: "8px" }}>{p.preco_fechamento || "-"}</td>
-                <td style={{ padding: "8px" }}>{p.valor_liquido || "-"}</td>
-              </tr>
-            ))}
-
-            {posicoes.length === 0 && (
+        <div className="table-wrapper">
+          <table className="modern-table">
+            <thead>
               <tr>
-                <td colSpan={8} style={{ padding: "12px", textAlign: "center" }}>
-                  Nenhuma posição cadastrada para este cliente.
-                </td>
+                <th>Data</th>
+                <th>Conta</th>
+                <th>Código</th>
+                <th>Ativo</th>
+                <th>Tipo</th>
+                <th>Quantidade</th>
+                <th>Preço</th>
+                <th>Valor líquido</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {posicoes.length > 0 ? (
+                posicoes.map((p: Posicao) => (
+                  <tr key={p.id}>
+                    <td>{new Date(p.data_referencia).toLocaleDateString("pt-BR")}</td>
+                    <td>{p.conta}</td>
+                    <td>{p.codigo_negociacao || "-"}</td>
+                    <td>{p.nome_produto}</td>
+                    <td>{p.tipo_investimento || "-"}</td>
+                    <td>{p.quantidade}</td>
+                    <td>{p.preco_fechamento || "-"}</td>
+                    <td>{p.valor_liquido || "-"}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={8} className="text-center text-slate-400 py-4">
+                    Nenhuma posição cadastrada para este cliente.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

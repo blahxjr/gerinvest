@@ -54,79 +54,43 @@ export default function ImportacaoPage() {
   }
 
   return (
-    <div>
-      <h1>Importação B3</h1>
-      <p>Envie o arquivo da B3 para carregar posições da carteira.</p>
+    <div className="space-y-4">
+      <div className="panel">
+        <h1 className="text-2xl font-bold text-sky-300">Importação B3</h1>
+        <p className="text-sm text-slate-300">
+          Envie o arquivo da B3 para carregar posições da carteira.
+        </p>
 
-      <div
-        style={{
-          marginTop: "24px",
-          background: "#fff",
-          borderRadius: "12px",
-          padding: "24px",
-          maxWidth: "760px",
-        }}
-      >
-        <form onSubmit={enviarArquivo}>
-          <div style={{ marginBottom: "16px" }}>
-            <label
-              htmlFor="arquivo-b3"
-              style={{
-                display: "block",
-                marginBottom: "8px",
-                fontWeight: 600,
-              }}
-            >
+        <form onSubmit={enviarArquivo} className="mt-6 space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="arquivo-b3" className="block text-sm font-semibold text-slate-100">
               Arquivo da B3
             </label>
-
             <input
               id="arquivo-b3"
               name="arquivo-b3"
               type="file"
               accept=".csv,.txt"
               onChange={(e) => setArquivo(e.target.files?.[0] || null)}
-              style={{
-                display: "block",
-                width: "100%",
-                padding: "12px",
-                border: "1px solid #d1d5db",
-                borderRadius: "8px",
-                background: "#fff",
-              }}
+              className="block w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white outline-none transition focus:border-sky-400"
             />
           </div>
 
           <button
             type="submit"
             disabled={carregando}
-            style={{
-              padding: "12px 18px",
-              background: carregando ? "#6b7280" : "#111827",
-              color: "#fff",
-              border: "none",
-              borderRadius: "8px",
-              cursor: carregando ? "not-allowed" : "pointer",
-            }}
+            className="inline-flex items-center justify-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-slate-500"
           >
             {carregando ? "Importando..." : "Importar arquivo"}
           </button>
         </form>
 
-        <div
-          style={{
-            marginTop: "24px",
-            padding: "16px",
-            borderRadius: "8px",
-            background: "#f9fafb",
-            color: "#374151",
-          }}
-        >
+        <div className="mt-5 rounded-lg border border-slate-700 bg-slate-900 p-4 text-sm text-slate-200">
           {!resultado && <p>Nenhum arquivo processado ainda.</p>}
 
           {resultado && resultado.ok && (
-            <div>
-              <p><strong>Importação concluída com sucesso.</strong></p>
+            <div className="space-y-1">
+              <p className="font-semibold text-sky-300">Importação concluída com sucesso.</p>
               <p>Arquivo: {resultado.arquivo}</p>
               <p>Total de linhas: {resultado.totalLinhas}</p>
               <p>Inseridos: {resultado.inseridos}</p>
@@ -134,9 +98,9 @@ export default function ImportacaoPage() {
               <p>Ativos criados: {resultado.ativosCriados}</p>
 
               {resultado.erros && resultado.erros.length > 0 && (
-                <div style={{ marginTop: "12px" }}>
-                  <strong>Observações:</strong>
-                  <ul>
+                <div className="mt-3 rounded-lg bg-slate-800 p-3 text-slate-100">
+                  <p className="font-semibold">Observações:</p>
+                  <ul className="list-disc pl-5">
                     {resultado.erros.map((erro, index) => (
                       <li key={index}>{erro}</li>
                     ))}
@@ -147,8 +111,8 @@ export default function ImportacaoPage() {
           )}
 
           {resultado && !resultado.ok && (
-            <div style={{ color: "#b91c1c" }}>
-              <p><strong>Falha na importação.</strong></p>
+            <div className="rounded-lg bg-red-950 p-3 text-red-300">
+              <p className="font-semibold">Falha na importação.</p>
               <p>{resultado.error || "Erro desconhecido."}</p>
             </div>
           )}

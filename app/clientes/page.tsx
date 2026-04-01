@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { pool } from "../../lib/db";
 
 export default async function ClientesPage() {
@@ -10,13 +11,22 @@ export default async function ClientesPage() {
   const clientes = result.rows;
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-sky-300 mb-2">Clientes</h1>
-      <p className="text-slate-300 mb-4">Cadastro de clientes do sistema.</p>
+    <div className="main-card">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-sky-300">Clientes</h1>
+          <p className="text-slate-300">Cadastro de clientes do sistema.</p>
+        </div>
+        <Link
+          href="/clientes/new"
+          className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-400"
+        >
+          Novo cliente
+        </Link>
+      </div>
 
       <div className="table-wrapper">
-        <table className="modern-table">
-          <thead>
+        <table className="modern-table">          <thead>
             <tr>
               <th>Nome</th>
               <th>Documento</th>

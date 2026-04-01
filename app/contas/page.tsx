@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { pool } from "../../lib/db";
 
 export default async function ContasPage() {
@@ -18,20 +19,22 @@ export default async function ContasPage() {
   const contas = result.rows;
 
   return (
-    <div>
-      <h1>Contas</h1>
-      <p>Contas vinculadas aos clientes e instituições.</p>
+    <div className="main-card">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-sky-300">Contas</h1>
+          <p className="text-slate-300">Contas vinculadas aos clientes e instituições.</p>
+        </div>
+        <Link
+          href="/contas/new"
+          className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-400"
+        >
+          Nova conta
+        </Link>
+      </div>
 
-      <div
-        style={{
-          marginTop: "24px",
-          background: "#fff",
-          borderRadius: "12px",
-          padding: "16px",
-          overflowX: "auto",
-        }}
-      >
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <div className="table-wrapper">
+        <table className="modern-table">
           <thead>
             <tr style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
               <th style={{ padding: "12px" }}>Apelido</th>

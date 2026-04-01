@@ -22,20 +22,14 @@ export default async function PosicoesPage() {
   const posicoes = result.rows;
 
   return (
-    <div>
-      <h1>Posições</h1>
-      <p>Posições da carteira consolidadas por ativo e conta.</p>
+    <div className="main-card">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-sky-300">Posições</h1>
+        <p className="text-slate-300">Posições da carteira consolidadas por ativo e conta.</p>
+      </div>
 
-      <div
-        style={{
-          marginTop: "24px",
-          background: "#fff",
-          borderRadius: "12px",
-          padding: "16px",
-          overflowX: "auto",
-        }}
-      >
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <div className="table-wrapper">
+        <table className="modern-table">
           <thead>
             <tr style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
               <th style={{ padding: "12px" }}>Data</th>

@@ -77,22 +77,13 @@ export default function NovoAtivoPage() {
   }
 
   return (
-    <div style={{ maxWidth: "840px" }}>
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 600 }}>Novo ativo</h1>
-      <p style={{ marginTop: "4px", color: "#6b7280" }}>
-        Cadastre um ativo financeiro para uso nas posições.
-      </p>
+    <div className="main-card" style={{ maxWidth: "840px" }}>
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-sky-300">Novo ativo</h1>
+        <p className="text-slate-300">Cadastre um ativo financeiro para uso nas posições.</p>
+      </div>
 
-      <div
-        style={{
-          marginTop: "24px",
-          background: "#ffffff",
-          borderRadius: "16px",
-          padding: "20px 24px",
-          boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
-          border: "1px solid #e5e7eb",
-        }}
-      >
+      <div className="panel">
         {error && (
           <div
             style={{
