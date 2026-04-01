@@ -26,7 +26,8 @@ export default async function ClientesPage() {
       </div>
 
       <div className="table-wrapper">
-        <table className="modern-table">          <thead>
+        <table className="modern-table">
+          <thead>
             <tr>
               <th>Nome</th>
               <th>Documento</th>

@@ -24,10 +24,24 @@ export default function NovoAtivoPage() {
       try {
         const res = await fetch("/api/tipos-investimento");
         const data = await res.json();
+
+        if (!res.ok) {
+          const message = data?.message || "Erro ao carregar tipos de investimento.";
+          throw new Error(message);
+        }
+
+        if (!Array.isArray(data)) {
+          throw new Error("Formato de lista inválido para tipos de investimento.");
+        }
+
         setTiposInvestimento(data);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error(err);
-        setError("Erro ao carregar tipos de investimento.");
+        const message =
+          err && typeof err === "object" && err !== null && "message" in err
+            ? (err as Error).message
+            : "Erro ao carregar tipos de investimento.";
+        setError(message);
       }
     }
 

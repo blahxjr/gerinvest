@@ -4,10 +4,9 @@ import { createAuditLog } from "@/lib/audit";
 import { tipoInvestimentoSchema, TipoInvestimentoInput } from "@/lib/schemas";
 import { jsonResponse, errorResponse } from "@/lib/apiHelper";
 
-export async function GET(req: Request) {
-  const auth = await requireAuth(req, ["ADMIN", "ADVISOR", "CLIENT"]);
-  if (!auth.authorized) return auth.response!;
-
+export async function GET() {
+  // GET de tipos de investimento deve funcionar para o frontend sem exigir token,
+  // permitindo preenchimento de formulários mesmo em sessões em que não há autenticação pronta.
   try {
     const result = await pool.query(
       `SELECT id, nome, descricao, created_at, updated_at FROM tipos_investimento ORDER BY nome ASC`
