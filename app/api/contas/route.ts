@@ -1,10 +1,11 @@
+import { NextRequest } from "next/server";
 import { pool } from "../../../lib/db";
 import { requireAuth } from "@/lib/authGuard";
 import { createAuditLog } from "@/lib/audit";
 import { contaSchema, ContaInput } from "@/lib/schemas";
 import { jsonResponse, errorResponse } from "@/lib/apiHelper";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const auth = await requireAuth(req, ["ADMIN", "ADVISOR", "CLIENT"]);
   if (!auth.authorized) return auth.response!;
   try {
@@ -30,7 +31,7 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const auth = await requireAuth(req, ["ADMIN", "ADVISOR"]);
   if (!auth.authorized) return auth.response!;
 
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const parsed = contaSchema.safeParse(body);
     if (!parsed.success) {
-      return errorResponse(parsed.error.errors.map((e) => e.message).join('; '), 400);
+      return errorResponse(parsed.error.issues.map((e) => e.message).join('; '), 400);
     }
 
     const data: ContaInput = parsed.data;

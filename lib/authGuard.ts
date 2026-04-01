@@ -1,5 +1,5 @@
 import { getToken } from "next-auth/jwt";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const authSecret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
 
@@ -10,7 +10,7 @@ export type GuardResult = {
 };
 
 export async function requireAuth(
-  req: Request,
+  req: NextRequest,
   allowedRoles: string[] = ["ADMIN", "ADVISOR", "CLIENT"]
 ): Promise<GuardResult> {
   if (!authSecret) {

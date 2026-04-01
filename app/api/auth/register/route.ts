@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createUser, findUserByEmail } from "@/lib/auth";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body?.name || !body?.email || !body?.password) {
     return NextResponse.json({ error: "missing_fields" }, { status: 400 });

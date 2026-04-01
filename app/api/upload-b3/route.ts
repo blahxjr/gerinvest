@@ -80,7 +80,9 @@ function obterCampo(row: CsvRow, nomes: string[]) {
   return null;
 }
 
-export async function POST(req: Request) {
+import { NextRequest } from "next/server";
+
+export async function POST(req: NextRequest) {
   const client = await pool.connect();
 
   try {

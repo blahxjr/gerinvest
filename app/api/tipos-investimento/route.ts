@@ -1,3 +1,4 @@
+import { NextRequest } from "next/server";
 import { pool } from "../../../lib/db";
 import { requireAuth } from "@/lib/authGuard";
 import { createAuditLog } from "@/lib/audit";
@@ -18,7 +19,7 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const auth = await requireAuth(req, ["ADMIN", "ADVISOR"]);
   if (!auth.authorized) return auth.response!;
 
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const parsed = tipoInvestimentoSchema.safeParse(body);
     if (!parsed.success) {
-      return errorResponse(parsed.error.errors.map((e) => e.message).join('; '), 400);
+      return errorResponse(parsed.error.issues.map((e) => e.message).join('; '), 400);
     }
 
     const data: TipoInvestimentoInput = parsed.data;
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
       [data.nome.trim()]
     );
 
-    if (exists.rowCount > 0) {
+    if ((exists.rowCount ?? 0) > 0) {
       return errorResponse("Tipo de investimento já existe", 409);
     }
 

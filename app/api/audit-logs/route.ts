@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { pool } from "../../../lib/db";
 import { requireAuth } from "@/lib/authGuard";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const auth = await requireAuth(req, ["ADMIN", "ADVISOR"]);
   if (!auth.authorized) return auth.response!;
 
