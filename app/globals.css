@@ -2,38 +2,75 @@
 
 :root {
   --primary: #0EA5E9;
-  --primary-dark: #0284C7;
+  --primary-alt: #38BDF8;
   --accent: #10B981;
   --danger: #EF4444;
-  --warning: #F59E0B;
-  --surface: #0F172A;
-  --surface-2: #1E293B;
-  --surface-3: #334155;
-  --text: #F1F5F9;
+  --warning: #FBBF24;
+  --surface: #020617;
+  --surface-2: #0B1220;
+  --surface-3: #18243B;
+  --surface-4: #1E293B;
+  --text: #E2E8F0;
   --text-muted: #94A3B8;
-  --background: var(--surface);
-  --foreground: var(--text);
+  --border: #334155;
+  --shadow: 0 20px 80px rgba(0, 0, 0, 0.35);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--surface);
+  --color-foreground: var(--text);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-  min-height: 100vh;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: linear-gradient(120deg, #040b17 0%, #10203a 100%);
+  color: var(--text);
+  font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+}
+
 a {
   color: inherit;
+  text-decoration: none;
+}
+
+.main-card {
+  background: linear-gradient(180deg, var(--surface-3) 0%, var(--surface-2) 100%);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  border-radius: 16px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.badge-primary {
+  background: rgba(14, 165, 233, 0.18);
+  color: #7dd3fc;
+}
+
+.badge-accent {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+}
+
+.badge-danger {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
 }
 
