@@ -1,72 +1,48 @@
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Option = { id: string; nome: string };
-
-export default function NovoAtivoPage() {
+export default function NovoClientePage() {
   const router = useRouter();
 
-  const [tiposInvestimento, setTiposInvestimento] = useState<Option[]>([]);
-  const [tipoInvestimentoId, setTipoInvestimentoId] = useState("");
-
-  const [codigoNegociacao, setCodigoNegociacao] = useState("");
-  const [nomeProduto, setNomeProduto] = useState("");
-  const [tipoPapel, setTipoPapel] = useState("");
-  const [emissor, setEmissor] = useState("");
-
+  const [nome, setNome] = useState("");
+  const [documento, setDocumento] = useState("");
+  const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function loadTipos() {
-      try {
-        const res = await fetch("/api/tipos-investimento");
-        const data = await res.json();
-        setTiposInvestimento(data);
-      } catch (err) {
-        console.error(err);
-        setError("Erro ao carregar tipos de investimento.");
-      }
-    }
-
-    loadTipos();
-  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
 
-    if (!codigoNegociacao.trim() || !nomeProduto.trim()) {
-      setError("Preencha código de negociação e nome do produto.");
+    if (!nome.trim()) {
+      setError("Nome é obrigatório.");
       return;
     }
 
     try {
       setIsSubmitting(true);
 
-      const res = await fetch("/api/ativos", {
+      const res = await fetch("/api/clientes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          codigoNegociacao: codigoNegociacao.trim(),
-          nomeProduto: nomeProduto.trim(),
-          tipoPapel: tipoPapel.trim() || null,
-          emissor: emissor.trim() || null,
-          tipoInvestimentoId: tipoInvestimentoId || null,
+          nome: nome.trim(),
+          documento: documento.trim() || null,
+          email: email.trim() || null,
         }),
       });
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.message || "Erro ao salvar ativo.");
+        throw new Error(data?.message || "Erro ao salvar cliente.");
       }
 
-      router.push("/ativos");
+      router.push("/clientes");
       router.refresh();
     } catch (err: any) {
-      setError(err.message || "Erro ao salvar ativo.");
+      setError(err.message || "Erro ao salvar cliente.");
     } finally {
       setIsSubmitting(false);
     }
@@ -74,9 +50,9 @@ export default function NovoAtivoPage() {
 
   return (
     <div style={{ maxWidth: "840px" }}>
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 600 }}>Novo ativo</h1>
+      <h1 style={{ fontSize: "1.5rem", fontWeight: 600 }}>Novo cliente</h1>
       <p style={{ marginTop: "4px", color: "#6b7280" }}>
-        Cadastre um ativo financeiro para uso nas posições.
+        Cadastre os dados básicos do cliente.
       </p>
 
       <div
@@ -113,126 +89,9 @@ export default function NovoAtivoPage() {
               gap: "16px 20px",
             }}
           >
-            <div>
-              <label
-                htmlFor="codigo"
-                style={{
-                  display: "block",
-                  marginBottom: "4px",
-                  fontWeight: 500,
-                  fontSize: "0.9rem",
-                }}
-              >
-                Código de negociação *
-              </label>
-              <input
-                id="codigo"
-                type="text"
-                value={codigoNegociacao}
-                onChange={(e) =>
-                  setCodigoNegociacao(e.target.value.toUpperCase())
-                }
-                style={{
-                  width: "100%",
-                  padding: "9px 11px",
-                  borderRadius: "10px",
-                  border: "1px solid #d1d5db",
-                  fontSize: "0.9rem",
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="nomeProduto"
-                style={{
-                  display: "block",
-                  marginBottom: "4px",
-                  fontWeight: 500,
-                  fontSize: "0.9rem",
-                }}
-              >
-                Nome do produto *
-              </label>
-              <input
-                id="nomeProduto"
-                type="text"
-                value={nomeProduto}
-                onChange={(e) => setNomeProduto(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "9px 11px",
-                  borderRadius: "10px",
-                  border: "1px solid #d1d5db",
-                  fontSize: "0.9rem",
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="tipoInvestimento"
-                style={{
-                  display: "block",
-                  marginBottom: "4px",
-                  fontWeight: 500,
-                  fontSize: "0.9rem",
-                }}
-              >
-                Tipo de investimento
-              </label>
-              <select
-                id="tipoInvestimento"
-                value={tipoInvestimentoId}
-                onChange={(e) => setTipoInvestimentoId(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "9px 11px",
-                  borderRadius: "10px",
-                  border: "1px solid #d1d5db",
-                  fontSize: "0.9rem",
-                  background: "#fff",
-                }}
-              >
-                <option value="">Selecione</option>
-                {tiposInvestimento.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="tipoPapel"
-                style={{
-                  display: "block",
-                  marginBottom: "4px",
-                  fontWeight: 500,
-                  fontSize: "0.9rem",
-                }}
-              >
-                Tipo de papel
-              </label>
-              <input
-                id="tipoPapel"
-                type="text"
-                value={tipoPapel}
-                onChange={(e) => setTipoPapel(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "9px 11px",
-                  borderRadius: "10px",
-                  border: "1px solid #d1d5db",
-                  fontSize: "0.9rem",
-                }}
-              />
-            </div>
-
             <div style={{ gridColumn: "1 / span 2" }}>
               <label
-                htmlFor="emissor"
+                htmlFor="nome"
                 style={{
                   display: "block",
                   marginBottom: "4px",
@@ -240,13 +99,68 @@ export default function NovoAtivoPage() {
                   fontSize: "0.9rem",
                 }}
               >
-                Emissor
+                Nome completo *
               </label>
               <input
-                id="emissor"
+                id="nome"
                 type="text"
-                value={emissor}
-                onChange={(e) => setEmissor(e.target.value)}
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                required
+                style={{
+                  width: "100%",
+                  padding: "9px 11px",
+                  borderRadius: "10px",
+                  border: "1px solid #d1d5db",
+                  fontSize: "0.9rem",
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="documento"
+                style={{
+                  display: "block",
+                  marginBottom: "4px",
+                  fontWeight: 500,
+                  fontSize: "0.9rem",
+                }}
+              >
+                Documento (CPF/CNPJ)
+              </label>
+              <input
+                id="documento"
+                type="text"
+                value={documento}
+                onChange={(e) => setDocumento(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "9px 11px",
+                  borderRadius: "10px",
+                  border: "1px solid #d1d5db",
+                  fontSize: "0.9rem",
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="email"
+                style={{
+                  display: "block",
+                  marginBottom: "4px",
+                  fontWeight: 500,
+                  fontSize: "0.9rem",
+                }}
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 style={{
                   width: "100%",
                   padding: "9px 11px",
@@ -268,7 +182,7 @@ export default function NovoAtivoPage() {
           >
             <button
               type="button"
-              onClick={() => router.push("/ativos")}
+              onClick={() => router.push("/clientes")}
               style={{
                 padding: "8px 16px",
                 borderRadius: "999px",
@@ -297,7 +211,7 @@ export default function NovoAtivoPage() {
                 boxShadow: "0 8px 20px rgba(37, 99, 235, 0.35)",
               }}
             >
-              {isSubmitting ? "Salvando..." : "Salvar ativo"}
+              {isSubmitting ? "Salvando..." : "Salvar cliente"}
             </button>
           </div>
         </form>

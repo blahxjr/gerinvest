@@ -16,11 +16,11 @@
 ## FASE 1 — Fundação (Prioridade Alta)
 
 ### 1.1 Autenticação e Segurança
-- [ ] **TASK-001** Instalar NextAuth.js v5 + adapter PostgreSQL
+- [✅] **TASK-001** Instalar NextAuth.js v5 + adapter PostgreSQL
   - Provider Credentials (email + senha com bcrypt)
   - Provider Google OAuth (opcional)
   - Migration: tabelas `users`, `accounts`, `sessions`
-- [ ] **TASK-002** Criar `middleware.ts` — proteção de rotas
+- [✅] **TASK-002** Criar `middleware.ts` — proteção de rotas
   - Público: `/login`, `/cadastro`, `/esqueci-senha`
   - Protegido: `/(app)/*`
 - [ ] **TASK-003** Criar páginas de autenticação com UI refinada

@@ -5,68 +5,74 @@ import { useRouter } from "next/navigation";
 
 type Option = { id: string; nome: string };
 
-export default function NovoAtivoPage() {
+export default function NovaContaPage() {
   const router = useRouter();
 
-  const [tiposInvestimento, setTiposInvestimento] = useState<Option[]>([]);
-  const [tipoInvestimentoId, setTipoInvestimentoId] = useState("");
+  const [clientes, setClientes] = useState<Option[]>([]);
+  const [instituicoes, setInstituicoes] = useState<Option[]>([]);
 
-  const [codigoNegociacao, setCodigoNegociacao] = useState("");
-  const [nomeProduto, setNomeProduto] = useState("");
-  const [tipoPapel, setTipoPapel] = useState("");
-  const [emissor, setEmissor] = useState("");
+  const [clienteId, setClienteId] = useState("");
+  const [instituicaoId, setInstituicaoId] = useState("");
+  const [numeroConta, setNumeroConta] = useState("");
+  const [apelido, setApelido] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadTipos() {
+    async function loadData() {
       try {
-        const res = await fetch("/api/tipos-investimento");
-        const data = await res.json();
-        setTiposInvestimento(data);
+        const [clientesRes, instRes] = await Promise.all([
+          fetch("/api/clientes"),
+          fetch("/api/instituicoes"),
+        ]);
+
+        const clientesData = await clientesRes.json();
+        const instData = await instRes.json();
+
+        setClientes(clientesData);
+        setInstituicoes(instData);
       } catch (err) {
         console.error(err);
-        setError("Erro ao carregar tipos de investimento.");
+        setError("Erro ao carregar clientes e instituições.");
       }
     }
 
-    loadTipos();
+    loadData();
   }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
 
-    if (!codigoNegociacao.trim() || !nomeProduto.trim()) {
-      setError("Preencha código de negociação e nome do produto.");
+    if (!clienteId || !instituicaoId || !numeroConta.trim()) {
+      setError("Preencha cliente, instituição e número da conta.");
       return;
     }
 
     try {
       setIsSubmitting(true);
 
-      const res = await fetch("/api/ativos", {
+      const res = await fetch("/api/contas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          codigoNegociacao: codigoNegociacao.trim(),
-          nomeProduto: nomeProduto.trim(),
-          tipoPapel: tipoPapel.trim() || null,
-          emissor: emissor.trim() || null,
-          tipoInvestimentoId: tipoInvestimentoId || null,
+          clienteId,
+          instituicaoId,
+          numeroConta: numeroConta.trim(),
+          apelido: apelido.trim() || null,
         }),
       });
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.message || "Erro ao salvar ativo.");
+        throw new Error(data?.message || "Erro ao salvar conta.");
       }
 
-      router.push("/ativos");
+      router.push("/contas");
       router.refresh();
     } catch (err: any) {
-      setError(err.message || "Erro ao salvar ativo.");
+      setError(err.message || "Erro ao salvar conta.");
     } finally {
       setIsSubmitting(false);
     }
@@ -74,9 +80,9 @@ export default function NovoAtivoPage() {
 
   return (
     <div style={{ maxWidth: "840px" }}>
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 600 }}>Novo ativo</h1>
+      <h1 style={{ fontSize: "1.5rem", fontWeight: 600 }}>Nova conta</h1>
       <p style={{ marginTop: "4px", color: "#6b7280" }}>
-        Cadastre um ativo financeiro para uso nas posições.
+        Vincule a conta a um cliente e a uma instituição.
       </p>
 
       <div
@@ -115,7 +121,7 @@ export default function NovoAtivoPage() {
           >
             <div>
               <label
-                htmlFor="codigo"
+                htmlFor="cliente"
                 style={{
                   display: "block",
                   marginBottom: "4px",
@@ -123,68 +129,12 @@ export default function NovoAtivoPage() {
                   fontSize: "0.9rem",
                 }}
               >
-                Código de negociação *
-              </label>
-              <input
-                id="codigo"
-                type="text"
-                value={codigoNegociacao}
-                onChange={(e) =>
-                  setCodigoNegociacao(e.target.value.toUpperCase())
-                }
-                style={{
-                  width: "100%",
-                  padding: "9px 11px",
-                  borderRadius: "10px",
-                  border: "1px solid #d1d5db",
-                  fontSize: "0.9rem",
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="nomeProduto"
-                style={{
-                  display: "block",
-                  marginBottom: "4px",
-                  fontWeight: 500,
-                  fontSize: "0.9rem",
-                }}
-              >
-                Nome do produto *
-              </label>
-              <input
-                id="nomeProduto"
-                type="text"
-                value={nomeProduto}
-                onChange={(e) => setNomeProduto(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "9px 11px",
-                  borderRadius: "10px",
-                  border: "1px solid #d1d5db",
-                  fontSize: "0.9rem",
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="tipoInvestimento"
-                style={{
-                  display: "block",
-                  marginBottom: "4px",
-                  fontWeight: 500,
-                  fontSize: "0.9rem",
-                }}
-              >
-                Tipo de investimento
+                Cliente *
               </label>
               <select
-                id="tipoInvestimento"
-                value={tipoInvestimentoId}
-                onChange={(e) => setTipoInvestimentoId(e.target.value)}
+                id="cliente"
+                value={clienteId}
+                onChange={(e) => setClienteId(e.target.value)}
                 style={{
                   width: "100%",
                   padding: "9px 11px",
@@ -194,10 +144,10 @@ export default function NovoAtivoPage() {
                   background: "#fff",
                 }}
               >
-                <option value="">Selecione</option>
-                {tiposInvestimento.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.nome}
+                <option value="">Selecione um cliente</option>
+                {clientes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
                   </option>
                 ))}
               </select>
@@ -205,7 +155,7 @@ export default function NovoAtivoPage() {
 
             <div>
               <label
-                htmlFor="tipoPapel"
+                htmlFor="instituicao"
                 style={{
                   display: "block",
                   marginBottom: "4px",
@@ -213,13 +163,47 @@ export default function NovoAtivoPage() {
                   fontSize: "0.9rem",
                 }}
               >
-                Tipo de papel
+                Instituição *
+              </label>
+              <select
+                id="instituicao"
+                value={instituicaoId}
+                onChange={(e) => setInstituicaoId(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "9px 11px",
+                  borderRadius: "10px",
+                  border: "1px solid #d1d5db",
+                  fontSize: "0.9rem",
+                  background: "#fff",
+                }}
+              >
+                <option value="">Selecione uma instituição</option>
+                {instituicoes.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="numeroConta"
+                style={{
+                  display: "block",
+                  marginBottom: "4px",
+                  fontWeight: 500,
+                  fontSize: "0.9rem",
+                }}
+              >
+                Número da conta *
               </label>
               <input
-                id="tipoPapel"
+                id="numeroConta"
                 type="text"
-                value={tipoPapel}
-                onChange={(e) => setTipoPapel(e.target.value)}
+                value={numeroConta}
+                onChange={(e) => setNumeroConta(e.target.value)}
                 style={{
                   width: "100%",
                   padding: "9px 11px",
@@ -230,9 +214,9 @@ export default function NovoAtivoPage() {
               />
             </div>
 
-            <div style={{ gridColumn: "1 / span 2" }}>
+            <div>
               <label
-                htmlFor="emissor"
+                htmlFor="apelido"
                 style={{
                   display: "block",
                   marginBottom: "4px",
@@ -240,13 +224,13 @@ export default function NovoAtivoPage() {
                   fontSize: "0.9rem",
                 }}
               >
-                Emissor
+                Apelido
               </label>
               <input
-                id="emissor"
+                id="apelido"
                 type="text"
-                value={emissor}
-                onChange={(e) => setEmissor(e.target.value)}
+                value={apelido}
+                onChange={(e) => setApelido(e.target.value)}
                 style={{
                   width: "100%",
                   padding: "9px 11px",
@@ -268,7 +252,7 @@ export default function NovoAtivoPage() {
           >
             <button
               type="button"
-              onClick={() => router.push("/ativos")}
+              onClick={() => router.push("/contas")}
               style={{
                 padding: "8px 16px",
                 borderRadius: "999px",
@@ -297,7 +281,7 @@ export default function NovoAtivoPage() {
                 boxShadow: "0 8px 20px rgba(37, 99, 235, 0.35)",
               }}
             >
-              {isSubmitting ? "Salvando..." : "Salvar ativo"}
+              {isSubmitting ? "Salvando..." : "Salvar conta"}
             </button>
           </div>
         </form>

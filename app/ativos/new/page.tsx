@@ -3,7 +3,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
-type Option = { id: string; nome: string };
+type Option = { id: number; nome: string };
 
 export default function NovoAtivoPage() {
   const router = useRouter();
@@ -129,9 +129,8 @@ export default function NovoAtivoPage() {
                 id="codigo"
                 type="text"
                 value={codigoNegociacao}
-                onChange={(e) =>
-                  setCodigoNegociacao(e.target.value.toUpperCase())
-                }
+                onChange={(e) => setCodigoNegociacao(e.target.value.toUpperCase())}
+                placeholder="Ex.: VALE3, BOVA11"
                 style={{
                   width: "100%",
                   padding: "9px 11px",
@@ -220,6 +219,7 @@ export default function NovoAtivoPage() {
                 type="text"
                 value={tipoPapel}
                 onChange={(e) => setTipoPapel(e.target.value)}
+                placeholder="Ex.: Ação, FII, ETF"
                 style={{
                   width: "100%",
                   padding: "9px 11px",
@@ -247,6 +247,7 @@ export default function NovoAtivoPage() {
                 type="text"
                 value={emissor}
                 onChange={(e) => setEmissor(e.target.value)}
+                placeholder="Ex.: Petrobras, Tesouro Nacional"
                 style={{
                   width: "100%",
                   padding: "9px 11px",
