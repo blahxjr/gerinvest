@@ -1,164 +1,200 @@
----
-applyTo: "app/api/**/*.ts,app/api/**/*.tsx,lib/**/*.ts,lib/**/*.tsx,middleware.ts,migrations/**/*.sql,**/*.sql"
----
+# Instruções de Backend – gerinvest
 
-# Backend Instructions — ProjInvest Web
+## Objetivo do backend
 
-## Objetivo
-Estas instruções se aplicam a toda alteração de backend, middleware, regras de negócio, autenticação, banco de dados e segurança do ProjInvest.
+- Fornecer uma **API e serviços internos** para:
+  - Importar uma planilha Excel de posição de investimentos.
+  - Converter essa planilha em **arquivos CSV** limpos.
+  - Expor dados de carteira e analytics em formas prontas para o frontend (DTOs para tabelas, gráficos, KPIs).
+- **Não existe banco de dados externo** neste projeto. O “banco” é o conjunto de CSVs.
 
-O backend é a fonte de verdade para integridade patrimonial, autenticação, autorização, deduplicação, auditoria e consistência das operações.
+## Arquitetura de backend
 
-## Regras centrais
-Toda regra crítica deve existir no backend. Nunca confiar apenas no frontend para:
-- validação;
-- autorização;
-- prevenção de duplicidade;
-- integridade de relacionamentos;
-- auditoria;
-- regras financeiras e patrimoniais.
+Use esta organização ao criar/alterar código:
 
-## Segurança obrigatória
-Toda implementação deve considerar:
-- autenticação obrigatória em áreas protegidas;
-- autorização por papéis e permissões;
-- validação de entrada no servidor;
-- sanitização e normalização de dados;
-- rate limiting em rotas sensíveis;
-- headers de segurança;
-- tratamento seguro de erros;
-- ausência de segredos hardcoded;
-- proteção contra duplicidade e reenvio indevido.
+- `src/core/domain`
+  - Tipos de domínio (`Position`, `PortfolioSummary`, `Allocation`, etc.).
+  - Funções puras de negócio (sem IO de arquivos, sem dependência de Next.js).
+- `src/core/services`
+  - **Serviços de aplicação** que consomem repositórios e funções de domínio.
+  - Ex.: `PortfolioService`, `ImportService`.
+- `src/infra/csv`
+  - Utilitários de leitura/escrita de CSV.
+  - Importador de Excel → CSV (`excelImporter`).
+  - Funções que lidam com filesystem (fs).
+- `src/infra/repositories`
+  - Repositórios que implementam interfaces de acesso a dados usando CSV.
+  - Ex.: `CsvPortfolioRepository` com métodos `getAllPositions`, `getSummary` etc.
+- `src/app/api/**`
+  - Rotas HTTP (App Router) que adaptam requisições HTTP para chamadas em `core/services`+`infra/repositories`.
 
-Sempre preferir falha segura a aceitação silenciosa de dados inválidos.
+Sempre que possível:
 
-## Autenticação e autorização
-Ao trabalhar com login, sessão ou permissões:
-- validar identidade e permissão no servidor;
-- proteger rotas, actions e endpoints;
-- negar por padrão quando a permissão não estiver explícita;
-- registrar eventos relevantes de autenticação;
-- nunca expor detalhes internos desnecessários em erros.
+- Coloque **tipos e lógica pura** em `core`.
+- Coloque **IO (CSV, Excel, fs)** em `infra`.
+- Mantenha as rotas HTTP finas: apenas parse de requisição + chamada a serviço + retorno de resposta.
 
-## Integridade e deduplicação
-Prevenção de duplicidade é requisito obrigatório.
+## Modelo de domínio principal
 
-Sempre aplicar defesa em camadas:
-- normalização de entrada;
-- validação de negócio;
-- verificação prévia de existência;
-- unique constraints;
-- índices compostos;
-- transações quando necessário;
-- idempotência em importações;
-- mensagens de conflito claras.
+### Position
 
-Tratar como risco crítico qualquer operação que possa gerar registros duplicados por concorrência, repetição de requisição ou variação de formatação.
+```ts
+type AssetClass =
+  | 'ACOES'
+  | 'BDR'
+  | 'ETF'
+  | 'FII'
+  | 'FIAGRO'
+  | 'RENDA_FIXA'
+  | 'TESOURO_DIRETO';
 
-## Auditoria e logs
-Toda alteração relevante deve gerar trilha de auditoria confiável.
+type Position = {
+  id: string;
+  assetClass: AssetClass;
+  ticker: string;
+  description: string;
+  institution: string;
+  account: string;
+  quantity: number;
+  price: number;
+  grossValue: number;
+  currency: 'BRL';
+  indexer?: string;
+  maturityDate?: string;
+  issuer?: string;
+};
+```
 
-Auditar:
-- login/logout;
-- falhas de autenticação;
-- criação;
-- edição;
-- exclusão lógica/física;
-- importações;
-- alterações administrativas;
-- mudanças de configuração;
-- conflitos e bloqueios de deduplicação;
-- falhas relevantes de integração.
+- `Position` é o modelo consolidado derivado das abas da planilha:
+  - `Acoes`, `BDR`, `ETF`, `Fundo de Investimento`, `Renda Fixa`, `Tesouro Direto`.[file:1]
 
-Cada evento deve conter, quando aplicável:
-- usuário;
-- papel;
-- entidade;
-- id da entidade;
-- tipo de ação;
-- timestamp;
-- origem;
-- resultado;
-- resumo antes/depois.
+### CSVs gerados
 
-Nunca registrar senhas, tokens completos ou segredos. Mascarar dados sensíveis.
+- Local padrão sugerido: `public/data` (ou `data/raw` se preferir não público).
+- Arquivos:
+  - `acoes.csv`
+  - `bdr.csv`
+  - `etf.csv`
+  - `fundos.csv`
+  - `renda-fixa.csv`
+  - `tesouro-direto.csv`
+  - `portfolio-positions.csv` (consolidado, já no schema de `Position`).[file:1]
 
-## Banco de dados
-Toda migration deve ser aditiva, segura e compatível com a base já existente.
+Backend deve sempre ler via repositório, nunca diretamente do Excel.
 
-Sempre considerar:
-- foreign keys;
-- índices;
-- unique constraints;
-- colunas created_at e updated_at;
-- soft delete quando apropriado;
-- colunas ou tabelas de auditoria;
-- rollback seguro quando possível.
+## Fluxo de upload e importação
 
-Ao alterar schema:
-1. planejar impacto;
-2. criar migration;
-3. atualizar contratos do backend;
-4. adaptar consultas e serviços;
-5. revisar riscos de duplicidade;
-6. revisar riscos de auditoria.
+### Rota: `POST /api/upload-positions`
 
-Nunca fazer alteração destrutiva sem justificativa explícita.
+Responsabilidades:
 
-## Serviços e regras de negócio
-Preferir regras complexas em services reutilizáveis, não espalhadas em handlers.
+1. Receber `FormData` com o arquivo Excel (`file`).
+2. Validar:
+   - Tipo (`.xlsx` / `.xls`).
+   - Tamanho razoável.
+3. Passar o `File`/`Buffer` para o importador:
 
-Ao implementar backend:
-- separar validação, serviço e acesso a dados;
-- usar nomes claros;
-- retornar respostas previsíveis;
-- padronizar erros;
-- manter código auditável;
-- evitar lógica implícita demais.
+   ```ts
+   const result = await excelImporter.importPositionsFromExcel(file);
+   ```
 
-## Importações e processamento
-Rotinas de importação devem:
-- validar formato;
-- normalizar dados;
-- detectar duplicidade;
-- registrar log da operação;
-- informar resumo do processamento;
-- falhar com segurança em inconsistências graves.
+4. `excelImporter.importPositionsFromExcel` deve:
+   - Ler o workbook com `xlsx`.
+   - Percorrer cada aba relevante da planilha.
+   - Mapear as colunas para objetos brutos (por aba).
+   - Converter esses objetos para `Position[]` com tipos corretos.
+   - Escrever os CSVs individuais + o CSV consolidado.
+   - Retornar um `ImportResult` com:
+     - `positions: Position[]`
+     - métricas por asset class (contagem, valor total, erros por linha).[file:1][web:16][web:120]
 
-Importações financeiras nunca devem inserir dados silenciosamente quando houver ambiguidade forte.
+5. A rota deve retornar JSON contendo um resumo amigável do resultado.
 
-## Concorrência e consistência
-Operações críticas devem considerar concorrência.
+### Regras de parsing da planilha
 
-Quando houver risco de corrida:
-- usar transação;
-- reforçar unicidade no banco;
-- projetar operação idempotente;
-- evitar condição de corrida entre validação e inserção.
+Para cada sheet:
 
-## Tratamento de erros
-Erros devem ser:
-- previsíveis;
-- seguros;
-- úteis para operação;
-- não verbosos para o usuário final.
+- `Acoes` → `assetClass = 'ACOES'`.
+- `BDR` → `assetClass = 'BDR'`.
+- `ETF` → `assetClass = 'ETF'`.
+- `Fundo de Investimento` → `assetClass`:
+  - Se houver informação de tipo indicando FIAGRO, marque `'FIAGRO'`.
+  - Caso contrário, `'FII'` por padrão, ajustando quando houver dados mais específicos.[file:1]
+- `Renda Fixa` → `assetClass = 'RENDA_FIXA'`, usando colunas de emissor, indexador e vencimento.
+- `Tesouro Direto` → `assetClass = 'TESOURO_DIRETO'`.[file:1]
 
-Nunca retornar stack trace, segredo, SQL bruto ou detalhes internos desnecessários ao cliente.
+Normalização de campos:
 
-## Middleware e proteção de rotas
-Ao editar middleware ou guards:
-- manter clareza entre rotas públicas e protegidas;
-- validar autenticação antes da renderização de áreas privadas;
-- respeitar papéis e escopo;
-- evitar brechas por rota alternativa;
-- manter comportamento previsível em redirecionamentos.
+- Converter números com `Number()` após trocar vírgulas por ponto, se necessário.
+- Tratar campos vazios como `undefined` ou zero, conforme contexto.
+- Manter descrição e instituição com acentuação original.
 
-## Critérios de aceite de backend
-Nenhuma mudança de backend está concluída sem verificar:
-- integridade da regra;
-- prevenção de duplicidade;
-- autorização correta;
-- tratamento de erro;
-- logs/auditoria quando aplicável;
-- compatibilidade com schema atual;
-- ausência de regressão evidente.
+Validação:
+
+- Use **Zod** (ou similar) para:
+  - Validar cada linha transformada em `Position`.
+  - Registrar erros por linha (sem interromper todo o processo por uma linha ruim).
+
+## Repositórios baseados em CSV
+
+Crie um repositório principal para a carteira, por exemplo:
+
+```ts
+interface PortfolioRepository {
+  getAllPositions(): Promise<Position[]>;
+  getPositionsByAssetClass(assetClass: AssetClass): Promise<Position[]>;
+  getSummary(): Promise<PortfolioSummary>;
+}
+```
+
+Implemente com `CsvPortfolioRepository`:
+
+- Utiliza utilitário genérico `readCsv<T>` em `infra/csv/csv-reader.ts`.
+- Pode manter cache em memória por request (não global) se necessário.
+
+`readCsv<T>`:
+
+- Lê o arquivo via `fs.promises.readFile`.
+- Usa biblioteca de CSV (fast-csv ou csv-parse) para parsear.[web:16][web:107]
+- Recebe um `mapper(row) => T` para produzir tipos fortes.
+
+## Serviços de analytics (PortfolioService)
+
+`PortfolioService` deve oferecer funções puras em cima de `Position[]`:
+
+- `getPortfolioSummary(positions)`:
+  - Total investido.
+  - Quantidade de ativos.
+  - Quantidade de contas / instituições.
+- `getAllocationByAssetClass(positions)`:
+  - `[ { assetClass, value, percentage } ]`.
+- `getAllocationByInstitution(positions)`:
+  - Agrupamento por instituição.
+- `getTopPositions(positions, limit)`:
+  - Top N posições por valor.
+- `getConcentrationMetrics(positions)`:
+  - maior posição (%), top 3, etc.
+- Outras métricas simples (ex.: % renda fixa vs renda variável).[file:1][web:99]
+
+Essas funções não devem acessar CSV nem filesystem — apenas consumir arrays de `Position`.
+
+## Comportamento esperado do Copilot no backend
+
+- Sempre que for adicionar regra de negócio:
+  - Coloque em **services/core/domain**.
+  - Deixe funções puras, testáveis e independentes de IO.
+- Ao lidar com upload/Excel:
+  - Centralize parsing em `excelImporter` (não duplique lógica em várias rotas).
+- Ao criar novas rotas API:
+  - Construa handlers mínimos que **delegam** para serviços e repositórios.
+- Quando o usuário pedir “dashboard” ou “analytics”:
+  - Pense primeiro em que funções em `PortfolioService` são necessárias.
+  - Só depois altere rotas ou componentes.
+
+Se uma tarefa parecer ambígua (ex.: “otimizar backend”):
+
+1. Liste rapidamente os pontos a revisar (importador, repositório, serviços).
+2. Sugira uma ordem de ataque em passos pequenos.
+3. Só então gere código.
+
+Isso evita alterações desnecessárias e economiza tokens em tentativas mal direcionadas.

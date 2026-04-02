@@ -1,61 +1,95 @@
-import { pool } from "../lib/db";
+import PortfolioOverview from '@/ui/components/dashboard/PortfolioOverview';
+import AllocationCharts from '@/ui/components/dashboard/AllocationCharts';
+import PositionsTable from '@/ui/components/dashboard/PositionsTable';
+import { CsvPortfolioRepository } from '@/infra/repositories/csvPortfolioRepository';
+import {
+  getPortfolioSummary,
+  getAllocationByAssetClass,
+  getAllocationByInstitution,
+  getTopPositions,
+  getConcentrationMetrics,
+  getFixedVsVariableRatio,
+} from '@/core/services/portfolioService';
 
 export default async function Home() {
-  const tiposResult = await pool.query(
-    "SELECT id, nome, descricao FROM tipos_investimento ORDER BY id"
-  );
+  const repo = new CsvPortfolioRepository();
+  const positions = await repo.getAllPositions().catch(() => []);
+  const summary = await repo.getSummary().catch(() => ({
+    totalInvested: 0,
+    totalPositions: 0,
+    uniqueTickers: 0,
+    uniqueAccounts: 0,
+    uniqueInstitutions: 0,
+  }));
+  const lastImportDate = await repo.getLastImportDate?.().catch(() => undefined);
 
-  const clientesResult = await pool.query(
-    "SELECT COUNT(*)::int AS total FROM clientes"
-  );
+  const allocationByAssetClass = getAllocationByAssetClass(positions || []);
+  const allocationByInstitution = getAllocationByInstitution(positions);
+  const topPositions = getTopPositions(positions, 20);
+  const concentration = getConcentrationMetrics(positions);
+  const fixedVsVariable = getFixedVsVariableRatio(positions);
 
-  const ativosResult = await pool.query(
-    "SELECT COUNT(*)::int AS total FROM ativos"
-  );
+  const sortedAssetClass = [...allocationByAssetClass].sort((a, b) => b.percentage - a.percentage);
+  const topAssetClass = sortedAssetClass[0];
+  const topInstitution = allocationByInstitution[0];
 
-  const posicoesResult = await pool.query(
-    "SELECT COUNT(*)::int AS total FROM posicoes_diarias"
-  );
-
-  const tipos = tiposResult.rows;
-  const totalClientes = clientesResult.rows[0]?.total ?? 0;
-  const totalAtivos = ativosResult.rows[0]?.total ?? 0;
-  const totalPosicoes = posicoesResult.rows[0]?.total ?? 0;
+  const data = {
+    summary: { ...summary, lastImportDate },
+    allocationByAssetClass,
+    allocationByInstitution,
+    topPositions,
+    concentration,
+    fixedVsVariable,
+    positions,
+  };
 
   return (
-    <main className="min-h-screen p-6 bg-slate-950 text-slate-100">
+    <main className="min-h-screen bg-slate-950 text-slate-100 p-6">
       <section className="max-w-6xl mx-auto">
-        <header className="mb-6">
-          <h1 className="text-3xl font-bold text-sky-400">Dashboard</h1>
-          <p className="text-slate-300">Sistema de gestão da carteira de investimentos.</p>
+        <header className="mb-6 flex flex-col gap-3">
+          <h1 className="text-3xl font-bold text-sky-400">Dashboard da Carteira</h1>
+          <p className="text-slate-300">Resumo de posições e alocação a partir de CSVs importados.</p>
+          <a href="/upload" className="rounded bg-emerald-500 px-4 py-2 text-sm font-semibold text-black w-max">
+            Ir para importação
+          </a>
         </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <div className="rounded-xl border border-white/10 bg-slate-800 p-4 shadow-lg">
-            <p className="text-sm text-slate-400">Clientes</p>
-            <p className="text-3xl font-bold">{totalClientes}</p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-slate-800 p-4 shadow-lg">
-            <p className="text-sm text-slate-400">Ativos</p>
-            <p className="text-3xl font-bold">{totalAtivos}</p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-slate-800 p-4 shadow-lg">
-            <p className="text-sm text-slate-400">Posições</p>
-            <p className="text-3xl font-bold">{totalPosicoes}</p>
-          </div>
-        </div>
+        <PortfolioOverview summary={data.summary} />
 
-        <section className="rounded-xl border border-white/10 bg-slate-800 p-6 shadow-lg">
-          <h2 className="text-xl font-semibold text-sky-300 mb-3">Tipos de investimento</h2>
-          <ul className="space-y-2">
-            {tipos.map((tipo: { id: number; nome: string; descricao: string }) => (
-              <li key={tipo.id} className="rounded-lg border border-white/5 bg-slate-900 p-3">
-                <span className="font-semibold text-slate-100">{tipo.nome}</span>
-                <span className="text-slate-400"> - {tipo.descricao}</span>
-              </li>
-            ))}
+        <AllocationCharts assetClass={data.allocationByAssetClass} institution={data.allocationByInstitution} />
+
+        <section className="mb-6 rounded-xl border border-white/10 bg-slate-800 p-4 shadow-lg">
+          <h3 className="text-lg font-semibold text-sky-300 mb-2">Insights rápidos</h3>
+          <ul className="text-slate-200 list-disc list-inside space-y-1">
+            <li>
+              A classe com maior peso é <strong>{topAssetClass?.assetClass ?? 'N/A'}</strong> com{' '}
+              <strong>{topAssetClass?.percentage.toFixed(2) ?? '0.00'}%</strong> da carteira.
+            </li>
+            <li>
+              A instituição que mais concentra recursos é <strong>{topInstitution?.institution ?? 'N/A'}</strong> com{' '}
+              <strong>{topInstitution?.percentage.toFixed(2) ?? '0.00'}%</strong>.
+            </li>
+            <li>
+              Posição mais concentrada: <strong>{data.topPositions[0]?.ticker ?? 'N/A'}</strong> ({data.topPositions[0]?.grossValue?.toFixed(2) ?? '0.00'}).
+            </li>
+            <li>
+              Carteira atual: <strong>{data.summary.totalPositions}</strong> posições; valor total{' '}
+              <strong>{data.summary.totalInvested.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>.
+            </li>
           </ul>
         </section>
+
+        <section className="mb-6 rounded-xl border border-white/10 bg-slate-800 p-4 shadow-lg">
+          <h3 className="text-lg font-semibold text-sky-300 mb-2">Concentração de posições</h3>
+          <p>Top 1: {data.concentration.top1Percentage.toFixed(2)}%</p>
+          <p>Top 3: {data.concentration.top3Percentage.toFixed(2)}%</p>
+          <p>Top 5: {data.concentration.top5Percentage.toFixed(2)}%</p>
+          <p>
+            Renda fixa: {data.fixedVsVariable.fixedPercentage.toFixed(2)}% | Renda variável: {data.fixedVsVariable.variablePercentage.toFixed(2)}%
+          </p>
+        </section>
+
+        <PositionsTable positions={data.positions} />
       </section>
     </main>
   );

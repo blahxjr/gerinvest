@@ -1,172 +1,164 @@
----
-applyTo: "app/**/*.ts,app/**/*.tsx,app/**/*.css,components/**/*.ts,components/**/*.tsx,components/**/*.css,public/**/*"
----
+# Instruções de Frontend – gerinvest
 
-# Frontend Instructions — ProjInvest Web
+## Objetivo da UI
 
-## Objetivo
-Estas instruções se aplicam a toda alteração de frontend do ProjInvest. O frontend deve refletir um sistema patrimonial premium, moderno, responsivo e confiável, inspirado na experiência visual da Área do Investidor da B3, sem copiar código ou identidade proprietária.
+- Expor uma **experiência de dashboard de investimentos** clara e eficiente, com:
+  - KPIs da carteira.
+  - Gráficos de alocação.
+  - Tabelas de posições.
+  - Fluxo de upload e feedback de importação da planilha.
 
-## Princípios de UI
-Toda interface deve priorizar:
-- clareza da informação;
-- legibilidade de números financeiros;
-- navegação consistente;
-- visual institucional e elegante;
-- responsividade real;
-- acessibilidade básica;
-- feedback visual refinado;
-- baixo ruído visual.
+- O frontend **não deve** acessar CSVs nem Excel diretamente.  
+  Sempre consuma dados via:
+  - server actions
+  - rotas de API em `app/api/**`
+  - ou serviços que já retornem DTOs prontos.
 
-Evite aparência genérica de template. Evite excesso de gradientes, efeitos sem função, cards inconsistentes ou telas com baixa densidade informacional.
+## Stack e layout
 
-## Estrutura visual padrão
-Sempre que possível, seguir esta estrutura:
-- AppLayout autenticado;
-- sidebar de navegação principal;
-- header contextual com breadcrumb, título, ações e perfil;
-- área principal com grid adaptável;
-- cards de KPI;
-- filtros e ações acima de tabelas;
-- tabelas ou listas com ações contextuais;
-- painéis de detalhes, histórico e auditoria.
+- Framework: **Next.js 16 – App Router**.
+- Linguagem: **TypeScript**.
+- UI: React (componentes funcionais, hooks).
+- Organização sugerida:
 
-## Design system
-O sistema deve manter consistência de:
-- espaçamento;
-- tipografia;
-- hierarquia visual;
-- bordas;
-- ícones;
-- cores semânticas;
-- estados interativos;
-- tema claro/escuro.
+```txt
+src/
+  app/
+    layout.tsx
+    page.tsx              // Dashboard principal
+    upload/
+      page.tsx            // Tela de upload da planilha
+  ui/
+    components/
+      dashboard/
+        PortfolioOverview.tsx
+        AllocationCharts.tsx
+        PositionsTable.tsx
+        RiskIndicators.tsx
+      upload/
+        UploadForm.tsx
+        UploadResult.tsx
+        UploadProgress.tsx
+```
 
-A IA pode definir um tema padrão elegante e sóbrio, mas o frontend deve prever personalização de:
-- modo claro/escuro;
-- cor primária;
-- preferências visuais do usuário.
+## Páginas principais
 
-## Experiência inspirada na B3
-Ao desenhar telas, priorize:
-- organização de patrimônio consolidado;
-- visão de movimentações e extratos;
-- leitura rápida de posição, alocação e evolução;
-- filtros por período, instituição, conta, cliente e tipo de ativo;
-- dashboards que pareçam ferramentas de acompanhamento patrimonial e não páginas genéricas de CRUD.
+### `/` – Dashboard principal
 
-## Componentes obrigatórios
-Sempre reutilizar ou criar componentes consistentes para:
-- AppSidebar;
-- AppHeader;
-- AppLayout;
-- PageHeader;
-- KpiCard;
-- DataTable;
-- EmptyState;
-- SkeletonCard;
-- SkeletonTable;
-- FormSection;
-- DetailSection;
-- AuditTimeline;
-- ThemeToggle.
+Contém:
 
-Evite repetir markup ou estilos entre páginas.
+1. **Header**:
+   - Nome do app.
+   - Data/hora da última importação da planilha (fornecida pelo backend).
+   - Botão para ir à página `/upload`.
 
-## Regras para páginas
-Toda página relevante deve considerar:
-- loading state;
-- error state;
-- empty state;
-- feedback de sucesso;
-- feedback de falha;
-- skeleton coerente com a estrutura real;
-- tratamento de lista vazia;
-- tratamento de dados ausentes;
-- navegação consistente.
+2. **Cards de KPIs** (componentes em `ui/components/dashboard`):
+   - Patrimônio total.
+   - Número de ativos.
+   - Número de contas/instituições.
+   - Percentual de renda fixa vs renda variável.[file:1]
 
-Nunca deixe página “crua” sem estados de suporte.
+3. **Gráficos**:
+   - Pizza ou donut: alocação por classe de ativo.
+   - Barras horizontais: alocação por instituição.
+   - (Opcional futuro) gráficos de linha/área para histórico.
 
-## Regras para formulários
-Todo formulário deve:
-- ter labels claros;
-- validar campos obrigatórios;
-- exibir erros úteis;
-- prevenir submissão dupla;
-- mostrar estado de envio;
-- ter mensagens seguras e compreensíveis;
-- agrupar campos por contexto;
-- usar componentes reutilizáveis.
+4. **Tabela de posições**:
+   - Colunas: ticker, descrição, instituição, conta, quantidade, preço, valor total, % da carteira.
+   - Suporte a ordenação (por valor, ticker, instituição).
+   - Filtro por classe de ativo.
 
-Nunca confiar só no frontend para validação crítica, mas sempre oferecer boa experiência local antes do envio.
+Dados para essa página devem vir de uma função/endpoint consolidado, por exemplo:
 
-## Regras para tabelas e listas
-Tabelas devem prever:
-- busca;
-- filtros;
-- ordenação;
-- paginação;
-- ações por linha;
-- seleção quando útil;
-- colunas financeiramente legíveis;
-- tratamento responsivo.
+```ts
+getDashboardData(): Promise<{
+  summary: PortfolioSummaryDTO;
+  allocationByAssetClass: AllocationDTO[];
+  allocationByInstitution: AllocationDTO[];
+  topPositions: PositionRowDTO[];
+}>
+```
 
-Quando uma tabela ficar inviável no mobile, adaptar visualmente sem quebrar a usabilidade.
+Frontend não deve recalcular métricas complexas; isso é responsabilidade do backend.
 
-## Dashboards
-Ao criar dashboards, priorize:
-- patrimônio total;
-- variação por período;
-- distribuição por tipo de ativo;
-- concentração por instituição;
-- movimentações recentes;
-- alertas de vencimento ou atenção;
-- comparação com benchmark quando existir.
+### `/upload` – Upload de planilha
 
-Gráficos devem ser elegantes, legíveis e funcionais. Não usar gráficos apenas por estética.
+Elementos-chave:
 
-## Layout responsivo
-Toda tela deve funcionar bem em:
-- desktop;
-- tablet;
-- mobile.
+- Card com:
+  - Título explicando que a planilha de posição será a **fonte de dados**.
+  - Input de arquivo (`.xlsx`, `.xls`).
+  - Botão para enviar.
+- Fluxo de estados:
+  - `Idle` → `Uploading` → `Processing` → `Done | Error`.
+- Em `Done`, mostrar:
+  - Quantidade de linhas importadas por aba.
+  - Valor total da carteira resultante (se disponível no retorno).
+  - Link ou botão para ir para o dashboard principal.
 
-Verificar:
-- overflow horizontal;
-- legibilidade de tabelas;
-- densidade dos filtros;
-- botões com área de toque adequada;
-- sidebar colapsável;
-- header adaptável;
-- componentes empilhando corretamente.
+Chamada:
 
-Uma tela bonita no desktop e quebrada no mobile é considerada incompleta.
+- Submeter via `fetch` para `POST /api/upload-positions`.
+- Mostrar mensagens de erro claras quando o backend reportar falhas (arquivo inválido, formato inesperado, etc.).
 
-## Acessibilidade
-Sempre garantir:
-- contraste adequado;
-- foco visível;
-- uso correto de headings;
-- labels em inputs;
-- textos de apoio quando necessário;
-- navegação por teclado nas áreas críticas;
-- ícones com contexto acessível.
+## Componentes e comportamento
 
-## Estilo de implementação
-Ao alterar frontend:
-1. entender a tela atual;
-2. mapear componentes existentes;
-3. preferir reaproveitamento antes de criar duplicatas;
-4. manter consistência visual com o restante do sistema;
-5. evitar refactors amplos sem necessidade;
-6. validar impacto em loading, error e empty states.
+### Regras gerais
 
-## Critérios de aceite de frontend
-Nenhuma mudança de frontend está concluída sem verificar:
-- consistência visual;
-- comportamento responsivo;
-- clareza de interação;
-- estados de loading/erro/vazio;
-- navegação sem quebra;
-- ausência de regressão visual evidente;
-- integração correta com backend.
+- Use **componentes pequenos e reutilizáveis**.
+- Mantenha **toda lógica de dados** em hooks/server components e **toda lógica visual** em componentes de apresentação:
+  - Ex.: `useDashboardData()` para buscar dados do backend; `DashboardView` para renderizar.
+- Sempre que usar gráficos, garanta:
+  - Eixos e legendas claros.
+  - Paleta consistente com o tema geral (seguir system design do projeto).
+
+### Loading, erro e estados vazios
+
+- Para qualquer fetch:
+  - Mostrar **skeletons** em cards e tabelas enquanto carrega.
+  - Exibir mensagem de erro amigável quando falhar.
+- Tabela de posições vazia:
+  - Mostrar empty state explicando que é preciso importar a planilha primeiro.
+
+## Acessibilidade e UX
+
+- Títulos bem estruturados:
+  - Um `<h1>` por página (por exemplo, “Visão geral da carteira”).
+  - Subtítulos com `<h2>`/`<h3>`.
+- Navegação por teclado:
+  - Foco visível em botões e links.
+- Gráficos:
+  - Fornecer textos alternativos ou descrições curtas das principais informações (por exemplo, “50% em renda fixa, 30% em ações…”).
+
+## Comportamento esperado do Copilot no frontend
+
+- Ao criar novos componentes:
+  - Checar primeiro se já existe algo reutilizável em `ui/components`.
+  - Extrair lógica de fetch para hooks ou server components (não duplicar chamadas em vários lugares).
+- Ao consumir dados:
+  - Confiar nos DTOs vindos de funções como `getDashboardData` em vez de reabrir arquivos CSV.
+- Ao receber uma tarefa ambígua (ex.: “melhorar layout do dashboard”):
+  - Propor um plano de 2–4 passos (ex.: reorganizar grid, melhorar responsividade, ajustar tipografia).
+  - Só então gerar mudanças de código, focando em uma área por vez.
+
+## Backlog de frontend (memória de longo prazo)
+
+Copilot pode usar estes tópicos como “trilhas” para entender a intenção de mudanças:
+
+1. **Clareza de informações financeiras**
+   - Deixar KPIs claros e legíveis.
+   - Evitar poluição visual e gráficos confusos.
+
+2. **Responsividade e mobile**
+   - Garantir que o dashboard funciona bem em telas pequenas.
+   - Simplificar layout em mobile (stack de cards, gráficos em coluna única).
+
+3. **Integração suave com backend**
+   - Usar contratos de dados definidos em `core`/`services`.
+   - Tratar erros de rede e de importação da planilha de forma gentil.
+
+4. **Performance de renderização**
+   - Evitar recomputações pesadas no client.
+   - Preferir dados pré-agrupados vindos do backend para gráficos e tabelas.
+
+Ao sugerir código, alinhe explicitamente qual desses tópicos está sendo atendido, quando fizer sentido (por exemplo, comentários rápidos ou nomes de commits).
