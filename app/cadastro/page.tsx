@@ -1,85 +1,236 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useEffect, useState } from 'react';
+import CarteiraForm from '@/ui/components/cadastro/CarteiraForm';
+import AtivoForm from '@/ui/components/cadastro/AtivoForm';
+import PosicaoForm from '@/ui/components/cadastro/PosicaoForm';
+import { CreateCarteiraInput, CreateAtivoInput, CreatePosicaoInput, Ativo } from '@/core/domain/entities';
+
+type Tab = 'carteira' | 'ativo' | 'posicao';
 
 export default function CadastroPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [success, setSuccess] = useState("");
-  const [error, setError] = useState("");
+  const [tab, setTab] = useState<Tab>('carteira');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [carteiras, setCarteiras] = useState<Array<{ id: string; nome: string }>>([]);
+  const [ativos, setAtivos] = useState<Ativo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSuccess("");
-    setError("");
+  // Carrega carteiras e ativos ao abrir a página
+  const loadData = async () => {
+    try {
+      const [carteirasResponse, ativosResponse] = await Promise.all([
+        fetch('/api/carteiras'),
+        fetch('/api/ativos'),
+      ]);
 
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
+      if (carteirasResponse.ok) {
+        const data = await carteirasResponse.json();
+        setCarteiras(Array.isArray(data) ? data : []);
+      }
 
-    if (res.ok) {
-      setSuccess("Cadastro realizado com sucesso. Faça login.");
-      setName("");
-      setEmail("");
-      setPassword("");
-    } else {
-      const json = await res.json();
-      setError(json?.error === "email_already_exists" ? "Email já cadastrado." : "Erro no cadastro.");
+      if (ativosResponse.ok) {
+        const data = await ativosResponse.json();
+        setAtivos(Array.isArray(data) ? data : []);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      setMessage({ type: 'error', text: 'Erro ao carregar dados iniciais' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // Carrega dados na primeira renderização
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleCarteiraSubmit = async (data: CreateCarteiraInput) => {
+    setLoading(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/carteiras', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (res.ok) {
+        setMessage({ type: 'success', text: 'Carteira criada com sucesso!' });
+        await loadData();
+        setTab('ativo');
+      } else {
+        const error = await res.json();
+        setMessage({ type: 'error', text: `Erro: ${error.message || 'Falha ao criar carteira'}` });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: `Erro: ${String(error)}` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAtivoSubmit = async (data: CreateAtivoInput) => {
+    setLoading(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/ativos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (res.ok) {
+        setMessage({ type: 'success', text: 'Ativo criado com sucesso!' });
+        await loadData();
+        setTab('posicao');
+      } else {
+        const error = await res.json();
+        setMessage({ type: 'error', text: `Erro: ${error.message || 'Falha ao criar ativo'}` });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: `Erro: ${String(error)}` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePosicaoSubmit = async (data: CreatePosicaoInput) => {
+    setLoading(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/posicoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (res.ok) {
+        setMessage({ type: 'success', text: 'Posição criada com sucesso!' });
+        await loadData();
+      } else {
+        const error = await res.json();
+        setMessage({ type: 'error', text: `Erro: ${error.message || 'Falha ao criar posição'}` });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: `Erro: ${String(error)}` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-slate-950 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto mb-4"></div>
+          <p className="text-slate-400">Carregando...</p>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100">
-      <form onSubmit={handleSubmit} className="w-full max-w-md rounded-xl border border-white/10 bg-slate-900/80 p-8 shadow-lg">
-        <h1 className="text-3xl font-bold mb-6">Cadastro</h1>
+    <main className="min-h-screen bg-slate-950 p-6">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold text-white mb-8">Cadastro de Investimentos</h1>
 
-        <label className="block mb-4">
-          <span className="text-sm text-slate-300">Nome</span>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="mt-1 w-full rounded-md border border-white/10 bg-slate-800 px-3 py-2 text-white"
-          />
-        </label>
+        {/* Mensagens de sucesso/erro */}
+        {message && (
+          <div
+            className={`mb-6 p-4 rounded-lg ${
+              message.type === 'success'
+                ? 'bg-emerald-500/20 border border-emerald-500 text-emerald-100'
+                : 'bg-red-500/20 border border-red-500 text-red-100'
+            }`}
+          >
+            {message.text}
+          </div>
+        )}
 
-        <label className="block mb-4">
-          <span className="text-sm text-slate-300">Email</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="mt-1 w-full rounded-md border border-white/10 bg-slate-800 px-3 py-2 text-white"
-          />
-        </label>
+        {/* Tabs */}
+        <div className="flex gap-4 mb-8 border-b border-slate-700">
+          <button
+            onClick={() => setTab('carteira')}
+            className={`px-6 py-3 font-medium transition-colors ${
+              tab === 'carteira'
+                ? 'border-b-2 border-sky-600 text-sky-400'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            1. Nova Carteira
+          </button>
+          <button
+            onClick={() => setTab('ativo')}
+            className={`px-6 py-3 font-medium transition-colors ${
+              tab === 'ativo'
+                ? 'border-b-2 border-sky-600 text-sky-400'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            2. Novo Ativo
+          </button>
+          <button
+            onClick={() => setTab('posicao')}
+            className={`px-6 py-3 font-medium transition-colors ${
+              tab === 'posicao'
+                ? 'border-b-2 border-sky-600 text-sky-400'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            3. Nova Posição
+          </button>
+        </div>
 
-        <label className="block mb-4">
-          <span className="text-sm text-slate-300">Senha</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="mt-1 w-full rounded-md border border-white/10 bg-slate-800 px-3 py-2 text-white"
-          />
-        </label>
+        {/* Form Content */}
+        <div className="rounded-xl border border-slate-700 bg-slate-900/50 p-8">
+          {tab === 'carteira' && (
+            <div>
+              <h2 className="text-xl font-semibold text-white mb-6">Criar Nova Carteira</h2>
+              <CarteiraForm
+                onSubmit={handleCarteiraSubmit}
+                onCancel={() => setTab('ativo')}
+                isLoading={loading}
+              />
+            </div>
+          )}
 
-        {error && <p className="mb-4 text-sm text-red-400">{error}</p>}
-        {success && <p className="mb-4 text-sm text-emerald-400">{success}</p>}
+          {tab === 'ativo' && (
+            <div>
+              <h2 className="text-xl font-semibold text-white mb-6">Cadastrar Novo Ativo</h2>
+              <AtivoForm
+                onSubmit={handleAtivoSubmit}
+                onCancel={() => setTab('carteira')}
+                isLoading={loading}
+              />
+            </div>
+          )}
 
-        <button type="submit" className="w-full rounded-md bg-emerald-500 px-4 py-2 font-semibold text-white hover:bg-emerald-400">
-          Criar conta
-        </button>
-
-        <p className="mt-4 text-xs text-slate-400">
-          Já tem conta? <a href="/login" className="text-sky-300 hover:text-sky-200">Entrar</a>
-        </p>
-      </form>
+          {tab === 'posicao' && (
+            <div>
+              <h2 className="text-xl font-semibold text-white mb-6">Criar Nova Posição</h2>
+              {carteiras.length === 0 ? (
+                <div className="p-4 rounded-lg bg-amber-500/20 border border-amber-500 text-amber-100">
+                  <p>Você precisa criar uma carteira antes de adicionar posições.</p>
+                </div>
+              ) : ativos.length === 0 ? (
+                <div className="p-4 rounded-lg bg-amber-500/20 border border-amber-500 text-amber-100">
+                  <p>Você precisa criar um ativo antes de adicionar posições.</p>
+                </div>
+              ) : (
+                <PosicaoForm
+                  onSubmit={handlePosicaoSubmit}
+                  onCancel={() => setTab('ativo')}
+                  carteiras={carteiras}
+                  ativos={ativos}
+                  isLoading={loading}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </main>
   );
 }

@@ -5,6 +5,9 @@
 
 import { ClasseAtivo, SubclasseAtivo, Currency } from './types';
 
+// Re-export tipos para conveniência
+export type { ClasseAtivo, SubclasseAtivo, Currency };
+
 /**
  * Carteira: agrupa posições por estratégia/perfil
  */
