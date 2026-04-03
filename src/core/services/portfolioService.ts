@@ -1,12 +1,21 @@
 import { Position } from '../domain/position';
 import { AllocationEntry, ConcentrationMetrics, PortfolioSummary } from '../domain/portfolio';
-import { AssetClass } from '../domain/types';
+import { ClasseAtivo } from '../domain/types';
+
+// Helper function to get safe grossValue
+const getGrossValue = (position: Position): number => {
+  return position.valorAtualBruto ?? position.grossValue ?? 0;
+};
+
+const getAssetClass = (position: Position): ClasseAtivo => {
+  return (position.assetClass ?? position.classe ?? 'ALTERNATIVO') as ClasseAtivo;
+};
 
 export function getPortfolioSummary(positions: Position[]): PortfolioSummary {
-  const totalInvested = positions.reduce((acc, position) => acc + position.grossValue, 0);
-  const uniqueTickers = new Set(positions.map((p) => p.ticker)).size;
-  const uniqueAccounts = new Set(positions.map((p) => p.account)).size;
-  const uniqueInstitutions = new Set(positions.map((p) => p.institution)).size;
+  const totalInvested = positions.reduce((acc, position) => acc + getGrossValue(position), 0);
+  const uniqueTickers = new Set(positions.map((p) => p.ticker || p.nome)).size;
+  const uniqueAccounts = new Set(positions.map((p) => p.account || p.conta)).size;
+  const uniqueInstitutions = new Set(positions.map((p) => p.institution || p.instituicao)).size;
 
   return {
     totalInvested,
@@ -18,28 +27,31 @@ export function getPortfolioSummary(positions: Position[]): PortfolioSummary {
 }
 
 export function getAllocationByAssetClass(positions: Position[]): AllocationEntry[] {
-  const totals: Record<AssetClass, number> = {
-    ACOES: 0,
-    BDR: 0,
-    ETF: 0,
+  const totals: Record<ClasseAtivo, number> = {
+    ACAO_BR: 0,
     FII: 0,
-    FIAGRO: 0,
+    ETF_BR: 0,
+    BDR: 0,
+    ACAO_EUA: 0,
+    ETF_EUA: 0,
+    REIT: 0,
+    FUNDO: 0,
+    CRIPTO: 0,
     RENDA_FIXA: 0,
-    TESOURO_DIRETO: 0,
-    FUNDOS_MULTIMERCADO: 0,
+    POUPANCA: 0,
     PREVIDENCIA: 0,
-    CRYPTO: 0,
-    OUTRO: 0,
+    ALTERNATIVO: 0,
   };
 
   positions.forEach((position) => {
-    totals[position.assetClass] = (totals[position.assetClass] || 0) + position.grossValue;
+    const assetClass = getAssetClass(position);
+    totals[assetClass] = (totals[assetClass] || 0) + getGrossValue(position);
   });
 
   const total = Object.values(totals).reduce<number>((sum, value) => sum + value, 0);
 
-  return (Object.entries(totals) as Array<[AssetClass, number]>).map(([assetClass, value]) => ({
-    assetClass,
+  return (Object.entries(totals) as Array<[ClasseAtivo, number]>).map(([classe, value]) => ({
+    classe,
     value,
     percentage: total === 0 ? 0 : (value / total) * 100,
   }));
@@ -48,8 +60,8 @@ export function getAllocationByAssetClass(positions: Position[]): AllocationEntr
 export function getAllocationByInstitution(positions: Position[]): AllocationEntry[] {
   const totals: Record<string, number> = {};
   positions.forEach((position) => {
-    const institution = position.institution || 'OUTROS';
-    totals[institution] = (totals[institution] ?? 0) + position.grossValue;
+    const institution = position.institution || position.instituicao || 'OUTROS';
+    totals[institution] = (totals[institution] ?? 0) + getGrossValue(position);
   });
 
   const total = Object.values(totals).reduce((sum, value) => sum + value, 0);
@@ -62,19 +74,19 @@ export function getAllocationByInstitution(positions: Position[]): AllocationEnt
 export function getTopPositions(positions: Position[], limit = 10): Position[] {
   return positions
     .slice()
-    .sort((a, b) => b.grossValue - a.grossValue)
+    .sort((a, b) => getGrossValue(b) - getGrossValue(a))
     .slice(0, limit);
 }
 
 export function getConcentrationMetrics(positions: Position[]): ConcentrationMetrics {
-  const total = positions.reduce((sum, p) => sum + p.grossValue, 0);
-  const sorted = positions.slice().sort((a, b) => b.grossValue - a.grossValue);
+  const total = positions.reduce((sum, p) => sum + getGrossValue(p), 0);
+  const sorted = positions.slice().sort((a, b) => getGrossValue(b) - getGrossValue(a));
 
-  const top1 = sorted.slice(0, 1).reduce((sum, p) => sum + p.grossValue, 0);
-  const top3 = sorted.slice(0, 3).reduce((sum, p) => sum + p.grossValue, 0);
-  const top5 = sorted.slice(0, 5).reduce((sum, p) => sum + p.grossValue, 0);
+  const top1 = sorted.slice(0, 1).reduce((sum, p) => sum + getGrossValue(p), 0);
+  const top3 = sorted.slice(0, 3).reduce((sum, p) => sum + getGrossValue(p), 0);
+  const top5 = sorted.slice(0, 5).reduce((sum, p) => sum + getGrossValue(p), 0);
 
-  const largestPositionValue = sorted[0]?.grossValue ?? 0;
+  const largestPositionValue = getGrossValue(sorted[0] ?? { valorAtualBruto: 0 } as Position);
   const largestPositionPercentage = total === 0 ? 0 : (largestPositionValue / total) * 100;
 
   return {
@@ -87,11 +99,11 @@ export function getConcentrationMetrics(positions: Position[]): ConcentrationMet
 }
 
 export function getFixedVsVariableRatio(positions: Position[]): { fixed: number; variable: number; fixedPercentage: number; variablePercentage: number } {
-  const fixedClasses: AssetClass[] = ['RENDA_FIXA', 'TESOURO_DIRETO'];
-  const variableClasses: AssetClass[] = ['ACOES', 'BDR', 'ETF', 'FII', 'FIAGRO'];
+  const fixedClasses: ClasseAtivo[] = ['RENDA_FIXA', 'POUPANCA'];
+  const variableClasses: ClasseAtivo[] = ['ACAO_BR', 'BDR', 'ETF_BR', 'FII', 'ACAO_EUA', 'ETF_EUA', 'REIT'];
 
-  const fixed = positions.filter((p) => fixedClasses.includes(p.assetClass)).reduce((sum, p) => sum + p.grossValue, 0);
-  const variable = positions.filter((p) => variableClasses.includes(p.assetClass)).reduce((sum, p) => sum + p.grossValue, 0);
+  const fixed = positions.filter((p) => fixedClasses.includes(getAssetClass(p))).reduce((sum, p) => sum + getGrossValue(p), 0);
+  const variable = positions.filter((p) => variableClasses.includes(getAssetClass(p))).reduce((sum, p) => sum + getGrossValue(p), 0);
   const total = fixed + variable;
 
   return {

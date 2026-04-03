@@ -3,6 +3,7 @@ import path from 'path';
 import { read, utils, WorkSheet } from 'xlsx';
 import { Position } from '../../core/domain/position';
 import { ImportResult, PortfolioImportMetrics } from '../../core/domain/portfolio';
+import { ClasseAtivo } from '../../core/domain/types';
 import { validatePosition } from '../../core/domain/validation';
 import { writeCsv } from './csv-writer';
 import { RawRow, buildPositionFromRaw, detectAssetClassBySheetName } from './positionMapper';
@@ -23,17 +24,27 @@ function getCellValue(row: RawRow, candidates: string[]): string {
 }
 
 function createPosition(overrides: Partial<Position>): Position {
+  const assetClass = (overrides.assetClass ?? 'ACAO_BR') as ClasseAtivo;
   const base: Position = {
-    id: `${overrides.assetClass ?? 'UNKNOWN'}-${overrides.ticker ?? 'UNKNOWN'}-${overrides.account ?? 'UNKNOWN'}-${Math.random().toString(36).substring(2, 10)}`,
-    assetClass: overrides.assetClass ?? 'ACOES',
-    ticker: overrides.ticker ?? '',
-    description: overrides.description ?? '',
-    institution: overrides.institution ?? '',
-    account: overrides.account ?? '',
-    quantity: overrides.quantity ?? 0,
-    price: overrides.price ?? 0,
-    grossValue: overrides.grossValue ?? (overrides.quantity ?? 0) * (overrides.price ?? 0),
+    id: `${assetClass}-${overrides.ticker ?? 'UNKNOWN'}-${overrides.account ?? 'UNKNOWN'}-${Math.random().toString(36).substring(2, 10)}`,
+    classe: assetClass,
+    assetClass: assetClass,
+    nome: overrides.description ?? overrides.ticker ?? 'Desconhecido',
+    ticker: overrides.ticker,
+    description: overrides.description,
+    institution: overrides.institution,
+    instituicao: overrides.institution,
+    account: overrides.account,
+    conta: overrides.account,
+    quantity: overrides.quantity,
+    quantidade: overrides.quantity,
+    price: overrides.price,
+    precoMedio: overrides.price,
+    grossValue: (overrides.quantity ?? 0) * (overrides.price ?? 0),
+    valorAtualBruto: (overrides.quantity ?? 0) * (overrides.price ?? 0),
+    valorAtualBrl: (overrides.quantity ?? 0) * (overrides.price ?? 0),
     currency: 'BRL',
+    moedaOriginal: 'BRL',
     indexer: overrides.indexer,
     maturityDate: overrides.maturityDate,
     issuer: overrides.issuer,
@@ -51,21 +62,21 @@ function parseSheetToPositions(sheetName: string, rows: RawRow[]): Position[] {
     }
 
     const normalizedSheet = sheetName.toLowerCase().trim();
-    let assetClass: Position['assetClass'] | undefined;
+    let assetClass: ClasseAtivo | undefined;
 
     switch (normalizedSheet) {
       case 'acoes':
-        assetClass = 'ACOES';
+        assetClass = 'ACAO_BR';
         break;
       case 'bdr':
         assetClass = 'BDR';
         break;
       case 'etf':
-        assetClass = 'ETF';
+        assetClass = 'ETF_BR';
         break;
       case 'fundo de investimento': {
         const rawKind = getCellValue(relevantRow, ['tipo', 'categoria', 'classe', 'subtipo']);
-        assetClass = rawKind.toUpperCase().includes('FIAGRO') ? 'FIAGRO' : 'FII';
+        assetClass = 'FUNDO';
         break;
       }
       case 'renda fixa':
@@ -73,7 +84,7 @@ function parseSheetToPositions(sheetName: string, rows: RawRow[]): Position[] {
         break;
       case 'tesouro direto':
       case 'tesouro':
-        assetClass = 'TESOURO_DIRETO';
+        assetClass = 'RENDA_FIXA';
         break;
       default:
         assetClass = undefined;
@@ -97,13 +108,19 @@ export async function importPositionsFromExcel(buffer: Buffer | ArrayBuffer): Pr
   const aggregatedPositions: Position[] = [];
 
   const perAssetClass: Record<string, PortfolioImportMetrics> = {
-    ACOES: { assetClass: 'ACOES', importedCount: 0, importedValue: 0, errors: [] },
-    BDR: { assetClass: 'BDR', importedCount: 0, importedValue: 0, errors: [] },
-    ETF: { assetClass: 'ETF', importedCount: 0, importedValue: 0, errors: [] },
-    FII: { assetClass: 'FII', importedCount: 0, importedValue: 0, errors: [] },
-    FIAGRO: { assetClass: 'FIAGRO', importedCount: 0, importedValue: 0, errors: [] },
-    RENDA_FIXA: { assetClass: 'RENDA_FIXA', importedCount: 0, importedValue: 0, errors: [] },
-    TESOURO_DIRETO: { assetClass: 'TESOURO_DIRETO', importedCount: 0, importedValue: 0, errors: [] },
+    ACAO_BR: { classe: 'ACAO_BR', importedCount: 0, importedValue: 0, errors: [] },
+    BDR: { classe: 'BDR', importedCount: 0, importedValue: 0, errors: [] },
+    ETF_BR: { classe: 'ETF_BR', importedCount: 0, importedValue: 0, errors: [] },
+    FII: { classe: 'FII', importedCount: 0, importedValue: 0, errors: [] },
+    FUNDO: { classe: 'FUNDO', importedCount: 0, importedValue: 0, errors: [] },
+    RENDA_FIXA: { classe: 'RENDA_FIXA', importedCount: 0, importedValue: 0, errors: [] },
+    ACAO_EUA: { classe: 'ACAO_EUA', importedCount: 0, importedValue: 0, errors: [] },
+    ETF_EUA: { classe: 'ETF_EUA', importedCount: 0, importedValue: 0, errors: [] },
+    REIT: { classe: 'REIT', importedCount: 0, importedValue: 0, errors: [] },
+    CRIPTO: { classe: 'CRIPTO', importedCount: 0, importedValue: 0, errors: [] },
+    POUPANCA: { classe: 'POUPANCA', importedCount: 0, importedValue: 0, errors: [] },
+    PREVIDENCIA: { classe: 'PREVIDENCIA', importedCount: 0, importedValue: 0, errors: [] },
+    ALTERNATIVO: { classe: 'ALTERNATIVO', importedCount: 0, importedValue: 0, errors: [] },
   };
 
   for (const sheetName of workbook.SheetNames) {
@@ -117,8 +134,8 @@ export async function importPositionsFromExcel(buffer: Buffer | ArrayBuffer): Pr
 
     sheetPositions.forEach((position, idx) => {
       const validation = validatePosition(position);
-      const assetClass = position.assetClass;
-      const stats = perAssetClass[assetClass];
+      const classe = (position.assetClass || position.classe) as ClasseAtivo;
+      const stats = perAssetClass[classe];
 
       if (!stats) {
         return;
@@ -127,78 +144,79 @@ export async function importPositionsFromExcel(buffer: Buffer | ArrayBuffer): Pr
       if (validation.valid) {
         aggregatedPositions.push(validation.position);
         stats.importedCount += 1;
-        stats.importedValue += validation.position.grossValue;
+        stats.importedValue += (validation.position.valorAtualBruto ?? validation.position.grossValue ?? 0);
       } else {
         stats.errors.push({ row: idx + 2, message: validation.errors.join('; ') });
       }
     });
   }
 
-  const totalValue = aggregatedPositions.reduce((acc, pos) => acc + pos.grossValue, 0);
+  const totalValue = aggregatedPositions.reduce((acc, pos) => acc + (pos.valorAtualBruto ?? pos.grossValue ?? 0), 0);
 
   // Write per-sheet CSVs and consolidated CSV
-  const byAssetClass: Record<string, Position[]> = {
-    ACOES: [],
-    BDR: [],
-    ETF: [],
-    FII: [],
-    FIAGRO: [],
-    RENDA_FIXA: [],
-    TESOURO_DIRETO: [],
-  };
+  const byAssetClass: Record<string, Position[]> = {};
 
   aggregatedPositions.forEach((position) => {
-    if (!byAssetClass[position.assetClass]) {
-      byAssetClass[position.assetClass] = [];
+    const classe = (position.assetClass || position.classe) as ClasseAtivo;
+    if (!byAssetClass[classe]) {
+      byAssetClass[classe] = [];
     }
-    byAssetClass[position.assetClass].push(position);
+    byAssetClass[classe].push(position);
   });
 
   const perAssetClassFilenames: Record<string, string> = {
-    ACOES: 'acoes.csv',
+    ACAO_BR: 'acoes.csv',
     BDR: 'bdr.csv',
-    ETF: 'etf.csv',
+    ETF_BR: 'etf.csv',
     FII: 'fundos.csv',
-    FIAGRO: 'fundos.csv',
+    FUNDO: 'fundos.csv',
     RENDA_FIXA: 'renda-fixa.csv',
-    TESOURO_DIRETO: 'tesouro-direto.csv',
+    ACAO_EUA: 'acoes-eua.csv',
+    ETF_EUA: 'etf-eua.csv',
+    REIT: 'reits.csv',
+    CRIPTO: 'cripto.csv',
+    POUPANCA: 'poupanca.csv',
+    PREVIDENCIA: 'previdencia.csv',
+    ALTERNATIVO: 'alternativo.csv',
   };
 
-  for (const assetClass of Object.keys(byAssetClass)) {
-    const records = byAssetClass[assetClass] || [];
-    const filename = perAssetClassFilenames[assetClass] ?? `${assetClass.toLowerCase()}.csv`;
+  for (const classe of Object.keys(byAssetClass)) {
+    const records = byAssetClass[classe] || [];
+    const filename = perAssetClassFilenames[classe] ?? `${classe.toLowerCase()}.csv`;
 
     await writeCsv(path.join(OUTPUT_FOLDER, filename), records, [
       'id',
-      'assetClass',
+      'nome',
+      'classe',
       'ticker',
-      'description',
-      'institution',
-      'account',
-      'quantity',
-      'price',
-      'grossValue',
-      'currency',
-      'indexer',
-      'maturityDate',
-      'issuer',
+      'descricao',
+      'instituicao',
+      'conta',
+      'quantidade',
+      'precoMedio',
+      'valorAtualBruto',
+      'valorAtualBrl',
+      'moedaOriginal',
+      'dataEntrada',
+      'dataVencimento',
     ]);
   }
 
   await writeCsv(path.join(OUTPUT_FOLDER, 'portfolio-positions.csv'), aggregatedPositions, [
     'id',
-    'assetClass',
+    'nome',
+    'classe',
     'ticker',
-    'description',
-    'institution',
-    'account',
-    'quantity',
-    'price',
-    'grossValue',
-    'currency',
-    'indexer',
-    'maturityDate',
-    'issuer',
+    'descricao',
+    'instituicao',
+    'conta',
+    'quantidade',
+    'precoMedio',
+    'valorAtualBruto',
+    'valorAtualBrl',
+    'moedaOriginal',
+    'dataEntrada',
+    'dataVencimento',
   ]);
 
   const metrics = Object.values(perAssetClass);

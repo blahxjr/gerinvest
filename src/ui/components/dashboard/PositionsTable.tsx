@@ -25,9 +25,14 @@ export default function PositionsTable({ positions }: Props) {
 
   const filteredPositions = useMemo(() => {
     return positions.filter(p => {
-      if (filters.assetClass.length > 0 && !filters.assetClass.includes(p.assetClass)) return false;
-      if (filters.institution.length > 0 && !filters.institution.includes(p.institution)) return false;
-      if (filters.search && !p.ticker.toLowerCase().includes(filters.search.toLowerCase()) && !p.description.toLowerCase().includes(filters.search.toLowerCase())) return false;
+      const assetClass = p.assetClass || p.classe;
+      const institution = p.institution || p.instituicao || 'Outros';
+      const ticker = p.ticker || '';
+      const description = p.description || p.descricao || '';
+      
+      if (filters.assetClass.length > 0 && assetClass && !filters.assetClass.includes(assetClass)) return false;
+      if (filters.institution.length > 0 && !filters.institution.includes(institution)) return false;
+      if (filters.search && !ticker.toLowerCase().includes(filters.search.toLowerCase()) && !description.toLowerCase().includes(filters.search.toLowerCase())) return false;
       return true;
     });
   }, [positions, filters]);
@@ -35,8 +40,8 @@ export default function PositionsTable({ positions }: Props) {
   const totalPages = Math.ceil(filteredPositions.length / ITEMS_PER_PAGE);
   const paginatedPositions = filteredPositions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const uniqueAssetClasses = [...new Set(positions.map(p => p.assetClass))];
-  const uniqueInstitutions = [...new Set(positions.map(p => p.institution))];
+  const uniqueAssetClasses = [...new Set(positions.map(p => p.assetClass || p.classe).filter(Boolean))];
+  const uniqueInstitutions = [...new Set(positions.map(p => p.institution || p.instituicao || 'Outros'))];
 
   if (positions.length === 0) {
     return <p className="text-slate-300">Nenhuma posição encontrada. Faça o upload da planilha primeiro.</p>;
@@ -91,16 +96,21 @@ export default function PositionsTable({ positions }: Props) {
             </tr>
           </thead>
           <tbody>
-            {paginatedPositions.map((p) => (
+            {paginatedPositions.map((p) => {
+              const price = p.price ?? p.precoMedio ?? 0;
+              const grossValue = p.grossValue ?? p.valorAtualBruto ?? 0;
+              const totalValue = positions.reduce((sum, q) => sum + (q.grossValue ?? q.valorAtualBruto ?? 0), 0);
+              
+              return (
               <tr key={p.id} className="border-b border-white/10 hover:bg-slate-900">
-                <td className="px-3 py-2">{p.ticker}</td>
-                <td className="px-3 py-2">{p.description}</td>
-                <td className="px-3 py-2">{p.institution}</td>
-                <td className="px-3 py-2">{p.account}</td>
-                <td className="px-3 py-2">{p.quantity}</td>
-                <td className="px-3 py-2">{formatCurrency(p.price)}</td>
-                <td className="px-3 py-2">{formatCurrency(p.grossValue)}</td>
-                <td className="px-3 py-2">{(p.grossValue / Math.max(1, positions.reduce((sum, q) => sum + q.grossValue, 0)) * 100).toFixed(2)}%</td>
+                <td className="px-3 py-2">{p.ticker || '-'}</td>
+                <td className="px-3 py-2">{p.description || p.descricao || '-'}</td>
+                <td className="px-3 py-2">{p.institution || p.instituicao || '-'}</td>
+                <td className="px-3 py-2">{p.account || p.conta || '-'}</td>
+                <td className="px-3 py-2">{p.quantity || p.quantidade || 0}</td>
+                <td className="px-3 py-2">{formatCurrency(price)}</td>
+                <td className="px-3 py-2">{formatCurrency(grossValue)}</td>
+                <td className="px-3 py-2">{(grossValue / Math.max(1, totalValue) * 100).toFixed(2)}%</td>
                 <td className="px-3 py-2">
                   <button
                     onClick={() => setEditingPosition(p)}
@@ -111,7 +121,8 @@ export default function PositionsTable({ positions }: Props) {
                   </button>
                 </td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>

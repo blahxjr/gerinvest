@@ -92,7 +92,7 @@ export default async function Home() {
           <h3 className="text-lg font-semibold text-sky-300 mb-2">Insights rápidos</h3>
           <ul className="text-slate-200 list-disc list-inside space-y-1">
             <li>
-              A classe com maior peso é <strong>{topAssetClass?.assetClass ?? 'N/A'}</strong> com{' '}
+              A classe com maior peso é <strong>{topAssetClass?.classe ?? 'N/A'}</strong> com{' '}
               <strong>{topAssetClass?.percentage.toFixed(2) ?? '0.00'}%</strong> da carteira.
             </li>
             <li>

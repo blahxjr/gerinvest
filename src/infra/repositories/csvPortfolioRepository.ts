@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { AssetClass } from '../../core/domain/types';
+import { AssetClass, ClasseAtivo } from '../../core/domain/types';
 import { Position } from '../../core/domain/position';
 import { PortfolioSummary } from '../../core/domain/portfolio';
 import { PortfolioRepository } from './portfolioRepository';
@@ -13,19 +13,33 @@ const FALLBACK_POSITIONS_CSV = path.join('docs', 'csvs', 'portfolio-positions.cs
 const DOCS_CSVS_FOLDER = path.join('docs', 'csvs');
 
 const mapRowToPosition = (row: Record<string, any>): Position => {
+  const assetClass = (row.classe || row.assetClass || 'ALTERNATIVO') as ClasseAtivo;
+  const grossValue = normalizeCurrency(row.grossValue || row.valorAtualBruto || 0);
+  const valorAtualBrl = normalizeCurrency(row.valorAtualBrl || grossValue || 0);
+  
   return {
     id: String(row.id),
-    assetClass: row.assetClass as AssetClass,
-    ticker: String(row.ticker),
-    description: String(row.description || ''),
-    institution: String(row.institution || ''),
-    account: String(row.account || ''),
-    quantity: Number(row.quantity || 0),
-    price: normalizeCurrency(row.price),
-    grossValue: normalizeCurrency(row.grossValue),
-    currency: 'BRL',
-    indexer: row.indexer ? String(row.indexer) : undefined,
+    classe: assetClass,
+    assetClass: assetClass,
+    nome: String(row.nome || row.description || row.ticker || 'Desconhecido'),
+    ticker: row.ticker ? String(row.ticker) : undefined,
+    description: row.description ? String(row.description) : undefined,
+    instituicao: row.instituicao ? String(row.instituicao) : undefined,
+    institution: row.institution ? String(row.institution) : undefined,
+    conta: row.conta ? String(row.conta) : undefined,
+    account: row.account ? String(row.account) : undefined,
+    quantidade: row.quantidade ? Number(row.quantidade) : undefined,
+    quantity: row.quantity ? Number(row.quantity) : undefined,
+    precoMedio: row.precoMedio ? normalizeCurrency(row.precoMedio) : undefined,
+    price: row.price ? normalizeCurrency(row.price) : undefined,
+    valorAtualBruto: grossValue,
+    grossValue: grossValue,
+    valorAtualBrl: valorAtualBrl,
+    moedaOriginal: (row.moedaOriginal || row.currency || 'BRL') as any,
+    currency: (row.currency || 'BRL') as any,
+    dataEntrada: row.dataEntrada ? String(row.dataEntrada) : undefined,
     maturityDate: row.maturityDate ? String(row.maturityDate) : undefined,
+    indexer: row.indexer ? String(row.indexer) : undefined,
     issuer: row.issuer ? String(row.issuer) : undefined,
   };
 };
@@ -77,7 +91,7 @@ export class CsvPortfolioRepository implements PortfolioRepository {
   async getSummary(): Promise<PortfolioSummary> {
     const positions = await this.getAllPositions();
 
-    const totalInvested = positions.reduce((acc, pos) => acc + pos.grossValue, 0);
+    const totalInvested = positions.reduce((acc, pos) => acc + (pos.valorAtualBrl ?? pos.grossValue ?? 0), 0);
     const uniqueTickers = new Set(positions.map((p) => p.ticker)).size;
     const uniqueAccounts = new Set(positions.map((p) => p.account)).size;
     const uniqueInstitutions = new Set(positions.map((p) => p.institution)).size;

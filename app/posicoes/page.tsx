@@ -29,13 +29,13 @@ export default async function PosicoesPage() {
             {positions.map((pos) => (
               <tr key={pos.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
                 <td style={{ padding: "12px" }}>{pos.ticker}</td>
-                <td style={{ padding: "12px" }}>{pos.description}</td>
-                <td style={{ padding: "12px" }}>{pos.assetClass}</td>
-                <td style={{ padding: "12px" }}>{pos.institution}</td>
-                <td style={{ padding: "12px" }}>{pos.account}</td>
-                <td style={{ padding: "12px" }}>{pos.quantity}</td>
-                <td style={{ padding: "12px" }}>{pos.price.toFixed(2)}</td>
-                <td style={{ padding: "12px" }}>{pos.grossValue.toFixed(2)}</td>
+                <td style={{ padding: "12px" }}>{pos.description || '-'}</td>
+                <td style={{ padding: "12px" }}>{pos.assetClass || '-'}</td>
+                <td style={{ padding: "12px" }}>{pos.institution || '-'}</td>
+                <td style={{ padding: "12px" }}>{pos.account || '-'}</td>
+                <td style={{ padding: "12px" }}>{pos.quantity || 0}</td>
+                <td style={{ padding: "12px" }}>{(pos.price ?? 0).toFixed(2)}</td>
+                <td style={{ padding: "12px" }}>{(pos.grossValue ?? 0).toFixed(2)}</td>
               </tr>
             ))}
             {positions.length === 0 && (

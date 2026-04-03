@@ -1,11 +1,10 @@
 /**
- * API Route: GET, PATCH, DELETE /api/ativos/[id]
- * Integra com PostgresPortfolioRepository (Tarefa E)
+ * API Route: GET, PATCH, DELETE /api/carteiras/[id]
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getPortfolioRepository } from '@/infra/repositories/postgresPortfolioRepository';
-import { CreateAtivoInput } from '@/core/domain/entities';
+import { CreateCarteiraInput } from '@/core/domain/entities';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -13,18 +12,18 @@ export async function GET(req: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
     const repo = getPortfolioRepository();
-    const ativo = await repo.getAtivoById(id);
-    if (!ativo) {
+    const carteira = await repo.getCarteiraById(id);
+    if (!carteira) {
       return NextResponse.json(
-        { error: 'Ativo não encontrado' },
+        { error: 'Carteira não encontrada' },
         { status: 404 }
       );
     }
-    return NextResponse.json(ativo, { status: 200 });
+    return NextResponse.json(carteira, { status: 200 });
   } catch (error) {
-    console.error(`GET /api/ativos/[${id}] error:`, error);
+    console.error(`GET /api/carteiras/[${id}] error:`, error);
     return NextResponse.json(
-      { error: 'Erro ao buscar ativo' },
+      { error: 'Erro ao buscar carteira' },
       { status: 500 }
     );
   }
@@ -34,27 +33,20 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
     const body = await req.json();
-    const input: Partial<CreateAtivoInput> = {
-      ticker: body.ticker,
+    const input: Partial<CreateCarteiraInput> = {
       nome: body.nome,
-      classe: body.classe,
-      subclasse: body.subclasse,
-      pais: body.pais,
-      moeda: body.moeda,
-      setor: body.setor,
-      segmento: body.segmento,
-      benchmark: body.benchmark,
-      indexador: body.indexador,
-      metadata: body.metadata,
+      descricao: body.descricao,
+      perfil: body.perfil,
+      moedaBase: body.moedaBase,
     };
 
     const repo = getPortfolioRepository();
-    const ativo = await repo.updateAtivo(id, input);
-    return NextResponse.json(ativo, { status: 200 });
+    const carteira = await repo.updateCarteira(id, input);
+    return NextResponse.json(carteira, { status: 200 });
   } catch (error) {
-    console.error(`PATCH /api/ativos/[${id}] error:`, error);
+    console.error(`PATCH /api/carteiras/[${id}] error:`, error);
     return NextResponse.json(
-      { error: 'Erro ao atualizar ativo' },
+      { error: 'Erro ao atualizar carteira' },
       { status: 500 }
     );
   }
@@ -64,12 +56,12 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
     const repo = getPortfolioRepository();
-    await repo.deleteAtivo(id);
+    await repo.deleteCarteira(id);
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
-    console.error(`DELETE /api/ativos/[${id}] error:`, error);
+    console.error(`DELETE /api/carteiras/[${id}] error:`, error);
     return NextResponse.json(
-      { error: 'Erro ao deletar ativo' },
+      { error: 'Erro ao deletar carteira' },
       { status: 500 }
     );
   }

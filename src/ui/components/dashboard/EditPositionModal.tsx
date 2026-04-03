@@ -13,14 +13,14 @@ type Props = {
 export default function EditPositionModal({ position, onClose }: Props) {
   const router = useRouter();
   const [form, setForm] = useState({
-    ticker: position.ticker,
-    description: position.description,
-    assetClass: position.assetClass,
-    institution: position.institution,
-    account: position.account,
-    quantity: position.quantity.toString(),
-    price: position.price.toString(),
-    grossValue: position.grossValue.toString(),
+    ticker: position.ticker || '',
+    description: position.description || '',
+    assetClass: position.assetClass || 'ALTERNATIVO',
+    institution: position.institution || '',
+    account: position.account || '',
+    quantity: (position.quantity || 0).toString(),
+    price: (position.price ?? 0).toString(),
+    grossValue: (position.grossValue ?? 0).toString(),
     indexer: position.indexer || '',
     maturityDate: position.maturityDate || '',
     issuer: position.issuer || '',

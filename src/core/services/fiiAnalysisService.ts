@@ -214,8 +214,10 @@ function generateFiiRecommendations(
   }
 
   // Recomendação 3: Balancear segmentos
-  const dominantSegment = Object.entries(segmentDist).reduce((max, [, v]) =>
-    v.percentage > max.percentage ? { segment: Object.keys(segmentDist)[0], percentage: v.percentage } : max
+  const dominantSegment = Object.entries(segmentDist).reduce(
+    (max, [segment, v]) =>
+      v.percentage > max.percentage ? { segment, percentage: v.percentage } : max,
+    { segment: '', percentage: 0 }
   );
   if (dominantSegment.percentage > 50) {
     recommendations.push({

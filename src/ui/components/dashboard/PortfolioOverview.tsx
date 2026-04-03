@@ -14,10 +14,11 @@ const formatPercent = (value: number, decimals = 2) =>
   `${value.toFixed(decimals)}%`;
 
 export default function PortfolioOverview({ summary, positions }: Props) {
-  const totalValue = positions.reduce((sum, p) => sum + p.grossValue, 0);
-  const topPosition = positions.reduce((top, p) => p.grossValue > top.grossValue ? p : top, positions[0]);
-  const diversification = new Set(positions.map(p => p.assetClass)).size;
-  const concentrationAlert = topPosition && (topPosition.grossValue / totalValue) > 0.2;
+  const getValue = (p: any) => p.valorAtualBrl ?? p.grossValue ?? 0;
+  const totalValue = positions.reduce((sum, p) => sum + getValue(p), 0);
+  const topPosition = positions.reduce((top, p) => getValue(p) > getValue(top) ? p : top, positions[0]);
+  const diversification = new Set(positions.map(p => p.assetClass || p.classe)).size;
+  const concentrationAlert = topPosition && (getValue(topPosition) / totalValue) > 0.2;
 
   const lastImportFormatted = summary.lastImportDate 
     ? new Date(summary.lastImportDate).toLocaleString('pt-BR', { 

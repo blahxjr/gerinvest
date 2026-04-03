@@ -28,10 +28,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function AllocationCharts({ assetClass, institution }: Props) {
   const assetClassData = assetClass.map(item => ({
-    name: item.assetClass,
+    name: item.classe || item.institution || 'Desconhecido',
     value: item.value,
     percentage: item.percentage,
-    color: ASSET_CLASS_COLORS[item.assetClass as keyof typeof ASSET_CLASS_COLORS] || '#94a3b8',
+    color: ASSET_CLASS_COLORS[(item.classe || 'ALTERNATIVO') as keyof typeof ASSET_CLASS_COLORS] || '#94a3b8',
   }));
 
   const institutionData = institution.slice(0, 10).map(item => ({
