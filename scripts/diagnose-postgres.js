@@ -2,16 +2,27 @@
 
 /**
  * Script de diagnóstico de PostgreSQL
- * Uso: node scripts/diagnose-postgres.js
+ * Uso: npm run db:diagnose
  */
 
 const { Pool } = require('pg');
-const path = require('path');
+const fs = require('fs');
 
-// Carregar .env.local
-require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
+// Tentar ler .env.local
+let DATABASE_URL = process.env.DATABASE_URL;
 
-const DATABASE_URL = process.env.DATABASE_URL;
+// Se não tiver, tenta padrão
+if (!DATABASE_URL) {
+  try {
+    const envContent = fs.readFileSync('.env.local', 'utf-8');
+    const match = envContent.match(/DATABASE_URL=(.+)/);
+    if (match) {
+      DATABASE_URL = match[1].trim();
+    }
+  } catch (e) {
+    // Arquivo pode não existir
+  }
+}
 
 console.log('\n🔍 DIAGNÓSTICO DE POSTGRESQL\n');
 
