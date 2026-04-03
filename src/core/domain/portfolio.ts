@@ -1,4 +1,4 @@
-import { AssetClass } from './types';
+import { ClasseAtivo, AssetClass } from './types';
 import { Position } from './position';
 
 export type PortfolioSummary = {
@@ -11,7 +11,7 @@ export type PortfolioSummary = {
 };
 
 export type AllocationEntry = {
-  assetClass?: AssetClass;
+  classe?: ClasseAtivo;
   institution?: string;
   value: number;
   percentage: number;
@@ -26,7 +26,7 @@ export type ConcentrationMetrics = {
 };
 
 export type PortfolioImportMetrics = {
-  assetClass: AssetClass;
+  classe: ClasseAtivo;
   importedCount: number;
   importedValue: number;
   errors: Array<{ row: number; message: string }>;
