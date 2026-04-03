@@ -26,6 +26,10 @@ export function getAllocationByAssetClass(positions: Position[]): AllocationEntr
     FIAGRO: 0,
     RENDA_FIXA: 0,
     TESOURO_DIRETO: 0,
+    FUNDOS_MULTIMERCADO: 0,
+    PREVIDENCIA: 0,
+    CRYPTO: 0,
+    OUTRO: 0,
   };
 
   positions.forEach((position) => {

@@ -101,6 +101,24 @@ Chamada:
 - Submeter via `fetch` para `POST /api/upload-positions`.
 - Mostrar mensagens de erro claras quando o backend reportar falhas (arquivo inválido, formato inesperado, etc.).
 
+### Compatibilidade com Google Sheets
+
+- Adicionar opção secundária no UI de upload:
+  - `input type="text"` para colar link de planilha ou ID de Spreadsheet Google (ex.: `https://docs.google.com/spreadsheets/d/ID/edit`).
+  - botões:
+    - `Importar arquivo` (Excel local) e `Usar Google Sheets`.
+  - validação imediata do ID via regex:
+    - `/spreadsheets\/d\/([a-zA-Z0-9-_]+)/`.
+  - se o link for válido, chamar `POST /api/upload-positions/google-sheet` com `{ spreadsheetUrl }`.
+
+- estado do formulário:
+  - `idle`, `loading`, `success`, `error`.
+  - exibir sempre resumo do resultado (`linhas importadas`, `valor total`, `erros`).
+
+- UX:
+  - indicar quando a planilha for “consumo remoto” (não local).
+  - botão `Sincronizar agora` na visão de dashboard para recarregar do Google Sheets.
+
 ## Componentes e comportamento
 
 ### Regras gerais

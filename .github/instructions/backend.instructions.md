@@ -123,6 +123,63 @@ Para cada sheet:
 - `Renda Fixa` → `assetClass = 'RENDA_FIXA'`, usando colunas de emissor, indexador e vencimento.
 - `Tesouro Direto` → `assetClass = 'TESOURO_DIRETO'`.[file:1]
 
+## Integração com Google Sheets (novo)
+
+### Motivação
+
+- Permitir usar uma Google Spreadsheet como fonte de dados dinâmica.
+- Injetar options de URL/link compartilhado no frontend.
+- Manter o parser de `Position` e a camada de repositório independente de origem de dados.
+
+### Requisitos de credenciais
+
+1. Criar projeto no Google Cloud Console.
+2. Ativar API Google Sheets (`sheets.googleapis.com`).
+3. Criar `Service Account` e baixar JSON de credenciais.
+4. Compartilhar a planilha (ID) com o e-mail da service account (`editor` ou `viewer`).
+5. Em `.env`, prover:
+   - `GOOGLE_SHEETS_CLIENT_EMAIL`
+   - `GOOGLE_SHEETS_PRIVATE_KEY` (base64 ou raw com \n)
+   - `GOOGLE_SHEETS_SPREADSHEET_ID` (opcional, se padrão)
+
+### Nova estrutura de repositório
+
+- `src/infra/repositories/spreadsheetPortfolioRepository.ts`:
+  - implementa `PortfolioRepository` (getAllPositions + getSummary + updatePosition + deletePosition).
+  - usa `src/lib/googleSheets.ts` para acessar a API.
+- `src/lib/googleSheets.ts`:
+  - encapsula chamada a `@googleapis/sheets`.
+  - fornece `readSheetRows(spreadsheetId, range)` e `writeSheetRows(spreadsheetId, range, values)`.
+
+### API de controle de link
+
+- `app/api/google-sheet-config/route.ts`:
+  - `GET` retorna o link/id armazenado (em arquivo JSON em `data/settings.json` ou DB futuro).
+  - `POST` salva link/id no servidor.
+
+### API de sincronização
+
+- `app/api/sync-positions/route.ts`:
+  - `POST` dispara recarga de planilha e grava em CSV local (para fallback offline).
+  - `GET` opcional para ficar atual em memória.
+
+### Preferência: fallback CSV
+
+- `CsvPortfolioRepository` deve detectar se `GOOGLE_SHEETS_SPREADSHEET_ID` configurado.
+- Se estiver, delega para `SpreadsheetPortfolioRepository`.
+- Se não, mantém leitura CSV local (legacy).
+
+### Observações de segurança
+
+- O backend (server) deve assinar requisições com credenciais e não expor `SERVICE_ACCOUNT` no frontend.
+- O frontend só envia link de planilha via string; backend valida ID com regex e scope de permissões.
+
+### Transformação do fluxo atual
+
+- continua `POST /api/upload-positions` como ingestão manual local.
+- adicionar `POST /api/upload-positions/google-sheet` para registrar link e sincronizar.
+- manter `app/api/dashboard-data` consumindo `PortfolioRepository` abstrato.
+
 Normalização de campos:
 
 - Converter números com `Number()` após trocar vírgulas por ponto, se necessário.

@@ -1,4 +1,4 @@
-import { pool } from "../../../lib/db";
+import { pool } from "@/lib/db";
 import { parse } from "csv-parse/sync";
 import { createHash } from "crypto";
 

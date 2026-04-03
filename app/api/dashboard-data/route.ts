@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/authGuard';
 import { CsvPortfolioRepository } from '@/infra/repositories/csvPortfolioRepository';
 import {
   getPortfolioSummary,
@@ -9,7 +10,12 @@ import {
   getFixedVsVariableRatio,
 } from '@/core/services/portfolioService';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (!auth.authorized) {
+    return auth.response!;
+  }
+
   try {
     const repo = new CsvPortfolioRepository();
     const positions = await repo.getAllPositions();

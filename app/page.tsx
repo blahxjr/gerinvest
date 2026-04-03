@@ -1,5 +1,6 @@
 import PortfolioOverview from '@/ui/components/dashboard/PortfolioOverview';
 import AllocationCharts from '@/ui/components/dashboard/AllocationCharts';
+import DistributionCharts from '@/ui/components/dashboard/DistributionCharts';
 import PositionsTable from '@/ui/components/dashboard/PositionsTable';
 import { CsvPortfolioRepository } from '@/infra/repositories/csvPortfolioRepository';
 import {
@@ -10,18 +11,45 @@ import {
   getConcentrationMetrics,
   getFixedVsVariableRatio,
 } from '@/core/services/portfolioService';
+import { unstable_cache } from 'next/cache';
+
+const getCachedPositions = unstable_cache(
+  async () => {
+    const repo = new CsvPortfolioRepository();
+    return repo.getAllPositions().catch(() => []);
+  },
+  ['portfolio-positions'],
+  { revalidate: 60 } // revalida a cada 60s
+);
+
+const getCachedSummary = unstable_cache(
+  async () => {
+    const repo = new CsvPortfolioRepository();
+    return repo.getSummary().catch(() => ({
+      totalInvested: 0,
+      totalPositions: 0,
+      uniqueTickers: 0,
+      uniqueAccounts: 0,
+      uniqueInstitutions: 0,
+    }));
+  },
+  ['portfolio-summary'],
+  { revalidate: 60 }
+);
+
+const getCachedLastImportDate = unstable_cache(
+  async () => {
+    const repo = new CsvPortfolioRepository();
+    return repo.getLastImportDate?.().catch(() => undefined);
+  },
+  ['portfolio-last-import'],
+  { revalidate: 60 }
+);
 
 export default async function Home() {
-  const repo = new CsvPortfolioRepository();
-  const positions = await repo.getAllPositions().catch(() => []);
-  const summary = await repo.getSummary().catch(() => ({
-    totalInvested: 0,
-    totalPositions: 0,
-    uniqueTickers: 0,
-    uniqueAccounts: 0,
-    uniqueInstitutions: 0,
-  }));
-  const lastImportDate = await repo.getLastImportDate?.().catch(() => undefined);
+  const positions = await getCachedPositions();
+  const summary = await getCachedSummary();
+  const lastImportDate = await getCachedLastImportDate();
 
   const allocationByAssetClass = getAllocationByAssetClass(positions || []);
   const allocationByInstitution = getAllocationByInstitution(positions);
@@ -54,9 +82,11 @@ export default async function Home() {
           </a>
         </header>
 
-        <PortfolioOverview summary={data.summary} />
+        <PortfolioOverview summary={data.summary} positions={data.positions} />
 
         <AllocationCharts assetClass={data.allocationByAssetClass} institution={data.allocationByInstitution} />
+
+        <DistributionCharts positions={data.positions} topPositions={data.topPositions} fixedVsVariable={data.fixedVsVariable} />
 
         <section className="mb-6 rounded-xl border border-white/10 bg-slate-800 p-4 shadow-lg">
           <h3 className="text-lg font-semibold text-sky-300 mb-2">Insights rápidos</h3>

@@ -11,25 +11,24 @@ export function normalizeNumber(value: unknown): number {
 }
 
 export function normalizeCurrency(value: unknown): number {
-  let normalized = normalizeNumber(value);
-  if (normalized === 0) {
-    return 0;
+  if (value === undefined || value === null || value === '') return 0;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  
+  let str = String(value).trim();
+  // Remove símbolo R$, espaços e caracteres não numéricos exceto vírgula e ponto
+  str = str.replace(/[R$\s]/g, '');
+  
+  // Detecta formato brasileiro: 1.234,56 → ponto como milhar, vírgula como decimal
+  const brFormat = /^\d{1,3}(\.\d{3})*(,\d{1,2})?$/.test(str);
+  if (brFormat) {
+    str = str.replace(/\./g, '').replace(',', '.');
+  } else {
+    // Formato americano: 1,234.56 → vírgula como milhar, ponto como decimal
+    str = str.replace(/,/g, '');
   }
-
-  // Ajuste de escala para evitar distorções 
-  // - valores inteiros até 6 dígitos provavelmente em centavos, convertem para reais
-  // - valores extremos (ex: > 10 bilhões) são reduzidos em fator de 100 até ficarem em escala plausível
-  if (Number.isInteger(normalized) && normalized >= 100) {
-    if (normalized <= 1_000_000) {
-      normalized = normalized / 100;
-    }
-  }
-
-  while (normalized > 10_000_000_000) {
-    normalized = normalized / 100;
-  }
-
-  return Number.isFinite(normalized) ? normalized : 0;
+  
+  const parsed = parseFloat(str);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export function normalizeString(value: unknown): string {

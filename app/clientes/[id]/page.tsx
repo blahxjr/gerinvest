@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { pool } from "../../../lib/db";
+import { pool } from "@/lib/db";
 
 type PageProps = {
   params: { id: string };

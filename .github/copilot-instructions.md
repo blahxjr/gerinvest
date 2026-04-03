@@ -1,98 +1,436 @@
-# Instruções gerais para GitHub Copilot – gerinvest
+# ProjInvest — Copilot Instructions
 
-## Visão geral do repositório
+## Visão Geral do Projeto
+**ProjInvest** é uma aplicação Next.js 14+ (App Router, TypeScript estrito) para gerenciamento e visualização de carteira de investimentos brasileira, com suporte a CSVs importados manualmente. O stack é: Next.js 14, TypeScript, TailwindCSS v3, Recharts, csv-parse, e Neon/PostgreSQL como banco futuro.
 
-- Este repositório é o **gerinvest**, um aplicativo web de **carteira de investimentos**.
-- O objetivo é **substituir totalmente o banco de dados Postgres** por uma camada de dados baseada em **arquivos CSV** gerados a partir de uma **planilha Excel de posição de investimentos** (por exemplo `posicao-YYYY-MM-DD.xlsx`).
-- O app fornece:
-  - **Upload** de planilha de posição.
-  - **Pipeline de importação**: Excel → normalização → CSVs por classe de ativo + um CSV consolidado de posições.
-  - **Dashboard de investimentos**: visão consolidada, alocação, concentração, risco básico e gráficos.
+Arquitetura em camadas:
+- `src/core/domain/` → Tipos, entidades e interfaces puras
+- `src/core/services/` → Serviços de domínio (sem side-effects de I/O)
+- `src/infra/` → Implementações concretas (CSV, DB, HTTP)
+- `src/ui/components/` → Componentes React puros (sem lógica de negócio)
+- `app/` → Pages e API Routes do Next.js App Router
 
-## Stack e princípios
+---
 
-- Framework principal: **Next.js 16 com App Router**, usando **TypeScript**.
-- O repositório deve seguir:
-  - **TypeScript estrito** (evitar `any`).
-  - Arquitetura em camadas:
-    - `core/domain`: tipos e lógica de domínio (ex.: `Position`, `PortfolioSummary`).
-    - `core/services`: serviços de aplicação e analytics (operam apenas sobre tipos de domínio).
-    - `infra/csv`: leitura/escrita de CSV, parsing de Excel, acesso a filesystem.
-    - `infra/repositories`: repositórios que usam CSV como “fonte de dados”.
-    - `ui` ou `app`/`components`: camada de apresentação (React).
-- **Não** introduzir novas dependências de banco externo (Postgres, Supabase etc.) neste projeto. Toda persistência é via arquivos CSV.
+## 1. CORREÇÕES CRÍTICAS DE BACKEND
 
-## Como o Copilot deve usar estas instruções
+### 1.1 Corrigir `normalizeCurrency` em `src/infra/csv/helpers.ts`
+Reescrever a função para suportar múltiplos formatos sem assumir escala:
+```ts
+export function normalizeCurrency(value: unknown): number {
+  if (value === undefined || value === null || value === '') return 0;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  
+  let str = String(value).trim();
+  // Remove símbolo R$, espaços e caracteres não numéricos exceto vírgula e ponto
+  str = str.replace(/[R$\s]/g, '');
+  
+  // Detecta formato brasileiro: 1.234,56 → ponto como milhar, vírgula como decimal
+  const brFormat = /^\d{1,3}(\.\d{3})*(,\d{1,2})?$/.test(str);
+  if (brFormat) {
+    str = str.replace(/\./g, '').replace(',', '.');
+  } else {
+    // Formato americano: 1,234.56 → vírgula como milhar, ponto como decimal
+    str = str.replace(/,/g, '');
+  }
+  
+  const parsed = parseFloat(str);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+```
 
-- Considere este arquivo como **fonte primária de verdade** sobre o repositório.
-- Antes de propor grandes mudanças, procure:
-  - **Respeitar a arquitetura em camadas** descrita acima.
-  - Usar os módulos existentes em `core`, `infra` e `ui` sempre que possível, em vez de reinventar soluções.
-- **Não repita** longas explicações sobre o projeto em cada resposta. Use referências a arquivos e funções já existentes para economizar tokens.
-- Quando um pedido do usuário estiver ambíguo:
-  - Sugira **pequenas perguntas objetivas** (2–4 itens) para clarificar antes de gerar muito código.
-- Prefira:
-  - **Alterar arquivos já existentes** em vez de criar novos módulos redundantes.
-  - Splits de mudanças em **passos pequenos e coesos** (um conjunto de responsabilidades por PR ou por commit).
+### 1.2 Adicionar validação de colunas obrigatórias no `csv-reader.ts`
+```ts
+const REQUIRED_COLUMNS = ['ticker', 'assetClass', 'grossValue'];
 
-## Organização das instruções específicas
+export async function readCsv<T>(filePath: string, mapper: (row: any) => T): Promise<{ data: T[]; errors: string[] }> {
+  try { await fs.access(filePath); } catch { return { data: [], errors: ['Arquivo não encontrado'] }; }
+  
+  const content = await fs.readFile(filePath, 'utf-8');
+  const records = parse(content, { columns: true, skip_empty_lines: true, trim: true });
+  
+  if (records.length === 0) return { data: [], errors: ['CSV vazio'] };
+  
+  const headers = Object.keys(records);
+  const missing = REQUIRED_COLUMNS.filter(col => !headers.includes(col));
+  if (missing.length > 0) {
+    return { data: [], errors: [`Colunas obrigatórias ausentes: ${missing.join(', ')}`] };
+  }
+  
+  const errors: string[] = [];
+  const data = records.map((row: any, i: number) => {
+    try { return mapper(row); }
+    catch (e) { errors.push(`Linha ${i + 2}: ${String(e)}`); return null; }
+  }).filter(Boolean) as T[];
+  
+  return { data, errors };
+}
+```
 
-- Instruções detalhadas de backend: `.github/instructions/backend.instructions.md`.
-- Instruções detalhadas de frontend: `.github/instructions/frontend.instructions.md`.
-- Quando o usuário pedir algo de backend, **leia primeiro** `backend.instructions.md`.
-- Quando o usuário pedir algo de UI/dashboard, **leia primeiro** `frontend.instructions.md`.
+### 1.3 Expandir `AssetClass` em `src/core/domain/types.ts`
+```ts
+export type AssetClass =
+  | 'ACOES'
+  | 'BDR'
+  | 'ETF'
+  | 'FII'
+  | 'FIAGRO'
+  | 'RENDA_FIXA'
+  | 'TESOURO_DIRETO'
+  | 'FUNDOS_MULTIMERCADO'
+  | 'PREVIDENCIA'
+  | 'CRYPTO'
+  | 'OUTRO';
 
-## Convenções de código e fluxo de trabalho
+export const ASSET_CLASS_LABELS: Record<AssetClass, string> = {
+  ACOES: 'Ações',
+  BDR: 'BDR',
+  ETF: 'ETF',
+  FII: 'FII',
+  FIAGRO: 'Fiagro',
+  RENDA_FIXA: 'Renda Fixa',
+  TESOURO_DIRETO: 'Tesouro Direto',
+  FUNDOS_MULTIMERCADO: 'Fundos Multimercado',
+  PREVIDENCIA: 'Previdência',
+  CRYPTO: 'Criptoativos',
+  OUTRO: 'Outros',
+};
+```
 
-- Comandos típicos (podem variar conforme `package.json`):
-  - `npm install` – instalar dependências.
-  - `npm run dev` – rodar o app em desenvolvimento.
-  - `npm run build` – build de produção.
-  - `npm run lint` / `npm run test` – qualidade (se existirem scripts).
-- Estilo:
-  - Use **componentes funcionais** com React e hooks.
-  - Prefira **funções puras** em `core`/`services`.
-  - Mantenha **nomes de arquivos coesos** com os exports principais.
-- Fluxo recomendado para alterações:
-  1. Entender qual camada será impactada (domínio, infraestrutura CSV, repositório, serviço, UI).
-  2. Especificar rapidamente (em texto) a mudança: entrada, saída, efeitos colaterais.
-  3. Só então propor código, focando em **uma responsabilidade por vez**.
+### 1.4 Criar API Route para edição manual de posições
+Criar `app/api/positions/[id]/route.ts`:
+```ts
+import { NextRequest, NextResponse } from 'next/server';
+import { CsvPortfolioRepository } from '@/infra/repositories/csvPortfolioRepository';
 
-## Regras importantes para este projeto
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const body = await req.json();
+  const repo = new CsvPortfolioRepository();
+  
+  try {
+    const updated = await repo.updatePosition(params.id, body);
+    return NextResponse.json(updated);
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 400 });
+  }
+}
 
-1. **Fonte de dados = CSVs** gerados a partir de uma planilha Excel de posição:
-   - Não criar tabelas SQL, ORMs ou integrações externas de banco.
-   - Não depender de serviços externos para persistência neste repositório.
-2. **Separação clara de camadas**:
-   - Código de domínio e analytics **não** devem acessar arquivos diretamente.
-   - Infraestrutura (CSV/Excel) **não** deve conhecer componentes de UI.
-3. **Evitar devaneios**:
-   - Não inventar APIs REST inexistentes.
-   - Não criar microserviços ou filas assíncronas complexas, a menos que o usuário peça explicitamente.
-   - Não reescrever o projeto inteiro se o usuário pedir uma melhoria incremental.
-4. **Documentar rapidamente o que for não óbvio**:
-   - Quando criar novo módulo ou contrato público, inclua comentário sucinto com objetivo e uso esperado.
+export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
+  const repo = new CsvPortfolioRepository();
+  await repo.deletePosition(params.id);
+  return NextResponse.json({ ok: true });
+}
+```
 
-## Backlog macro (mapa mental de longo prazo)
+### 1.5 Implementar `updatePosition` e `deletePosition` em `CsvPortfolioRepository`
+O repositório deve ler todas as posições, modificar o registro pelo `id`, e reescrever o CSV com `csv-writer`. Use o `csv-writer.ts` já existente.
 
-Copilot deve considerar estas frentes de trabalho como “épicos” recorrentes:
+### 1.6 Adicionar cache no Server Component da dashboard
+No `app/page.tsx`, envolver o carregamento de dados com `unstable_cache` do Next.js:
+```ts
+import { unstable_cache } from 'next/cache';
 
-1. **Importação & normalização de dados**
-   - Parsing robusto da planilha Excel.
-   - Geração consistente de CSVs por classe + CSV consolidado de posições.
-   - Tratamento de erros e feedback claro na UI.
+const getCachedPositions = unstable_cache(
+  async () => {
+    const repo = new CsvPortfolioRepository();
+    return repo.getAllPositions().catch(() => []);
+  },
+  ['portfolio-positions'],
+  { revalidate: 60 } // revalida a cada 60s
+);
+```
 
-2. **Analytics da carteira**
-   - Cálculo de métricas de alocação, concentração e risco básico.
-   - Preparação de dados para gráficos (agrupamentos, percentuais, ordenações).
+---
 
-3. **Dashboard de investimentos**
-   - KPIs principais.
-   - Gráficos de alocação.
-   - Tabelas de posições com filtros.
+## 2. CORREÇÕES E IMPLEMENTAÇÕES DE FRONTEND
 
-4. **Qualidade de código e DX**
-   - Melhorar tipagem, garantir coesão de módulos.
-   - Manter instruções e arquitetura sempre alinhadas.
+### 2.1 Instalar e integrar Recharts para gráficos reais
+```bash
+npm install recharts
+npm install --save-dev @types/recharts
+```
 
-Ao trabalhar em qualquer tarefa, alinhe com um desses épicos sempre que possível, para manter a memória do projeto coesa.
+### 2.2 Reescrever `AllocationCharts.tsx` com gráficos interativos
+Substituir as barras HTML por gráficos Recharts. O componente deve ser um **Client Component** (`'use client'`) com:
+
+- **PieChart/DonutChart** para alocação por classe de ativo (com animação `AnimationEasing`)
+- **BarChart horizontal** para alocação por instituição
+- **Tooltip customizado** mostrando: Nome, Valor em R$, % da carteira
+- **Legenda clicável** que filtra/destaca fatias
+- **ResponsiveContainer** para adaptar ao tamanho da tela
+- **Cores por classe de ativo** definidas em constante:
+  ```ts
+  export const ASSET_CLASS_COLORS: Record<AssetClass, string> = {
+    ACOES: '#3b82f6',        // blue-500
+    BDR: '#8b5cf6',          // violet-500
+    ETF: '#06b6d4',          // cyan-500
+    FII: '#10b981',          // emerald-500
+    FIAGRO: '#84cc16',       // lime-500
+    RENDA_FIXA: '#f59e0b',   // amber-500
+    TESOURO_DIRETO: '#f97316', // orange-500
+    FUNDOS_MULTIMERCADO: '#ec4899', // pink-500
+    PREVIDENCIA: '#6366f1',  // indigo-500
+    CRYPTO: '#14b8a6',       // teal-500
+    OUTRO: '#94a3b8',        // slate-400
+  };
+  ```
+
+### 2.3 Implementar gráficos adicionais na dashboard
+Adicionar um terceiro painel de gráficos com:
+- **LineChart** de evolução histórica do patrimônio (se houver múltiplos CSVs com datas diferentes)
+- **BarChart** de top 10 posições por valor
+- **DonutChart** de Renda Fixa vs Renda Variável com valor em R$ no centro
+
+### 2.4 Adicionar botão "Editar" na `PositionsTable.tsx`
+```tsx
+'use client';
+import { useState } from 'react';
+import EditPositionModal from './EditPositionModal';
+
+// Na coluna de ações da tabela:
+<button
+  onClick={() => setEditingPosition(position)}
+  className="text-sky-400 hover:text-sky-200 transition-colors p-1 rounded"
+  aria-label={`Editar posição ${position.ticker}`}
+>
+  <PencilIcon className="w-4 h-4" />
+</button>
+```
+
+### 2.5 Criar `EditPositionModal.tsx`
+Modal para edição manual com campos:
+- `ticker` (texto, obrigatório)
+- `description` (texto)
+- `assetClass` (select com todas as opções de `AssetClass`)
+- `institution` (texto)
+- `account` (texto)
+- `quantity` (número)
+- `price` (número, formato BRL)
+- `grossValue` (número calculado automaticamente como `quantity × price`, editável manualmente)
+- `indexer` (texto opcional, para renda fixa)
+- `maturityDate` (date opcional, para renda fixa)
+- `issuer` (texto opcional)
+
+O modal deve:
+1. Fazer `PATCH /api/positions/[id]` ao salvar
+2. Usar `router.refresh()` do Next.js para recarregar os dados da page
+3. Ter validação inline com mensagens de erro
+4. Fechar com `Escape` e click fora
+
+### 2.6 Adicionar paginação e filtros na `PositionsTable.tsx`
+- Filtro por `assetClass` (multiselect)
+- Filtro por `institution` (multiselect)
+- Busca por `ticker` ou `description` (input text com debounce 300ms)
+- Ordenação clicável em todas as colunas (asc/desc)
+- Paginação de 25 itens por página com `Previous / Next`
+- Exibir contador: "Mostrando 1–25 de 142 posições"
+
+### 2.7 Adicionar KPIs adicionais em `PortfolioOverview.tsx`
+Além dos KPIs existentes, adicionar:
+- **Rentabilidade estimada** (se o CSV tiver campos `purchasePrice` ou `averageCost`)
+- **Diversificação** (número de classes com alocação > 5%)
+- **Maior posição** (ticker + % do portfólio)
+- **Data da última importação** formatada em pt-BR: `dd/MM/yyyy HH:mm`
+- **Badge de alerta** se alguma posição única representar > 20% do portfólio (concentração alta)
+
+### 2.8 Criar `app/loading.tsx` e `app/error.tsx`
+```tsx
+// app/loading.tsx
+export default function Loading() {
+  return (
+    <main className="min-h-screen bg-slate-950 p-6">
+      <div className="max-w-6xl mx-auto space-y-4">
+        {/* Skeleton para KPIs */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-24 rounded-xl bg-slate-800 animate-pulse" />
+          ))}
+        </div>
+        {/* Skeleton para gráficos */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="h-64 rounded-xl bg-slate-800 animate-pulse" />
+          <div className="h-64 rounded-xl bg-slate-800 animate-pulse" />
+        </div>
+      </div>
+    </main>
+  );
+}
+```
+
+```tsx
+// app/error.tsx
+'use client';
+export default function Error({ error, reset }: { error: Error; reset: () => void }) {
+  return (
+    <main className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+      <div className="text-center space-y-4">
+        <h2 className="text-xl font-semibold text-red-400">Erro ao carregar dashboard</h2>
+        <p className="text-slate-400">{error.message}</p>
+        <button onClick={reset} className="bg-sky-600 text-white px-4 py-2 rounded-lg">
+          Tentar novamente
+        </button>
+      </div>
+    </main>
+  );
+}
+```
+
+---
+
+## 3. PÁGINA DE IMPORTAÇÃO — MELHORIAS
+
+### 3.1 Validação visual no upload
+A página `app/importacao` deve exibir:
+- Preview das primeiras 5 linhas do CSV antes de confirmar importação
+- Lista de erros de validação com número da linha problemática
+- Confirmação com resumo: "X posições válidas, Y erros encontrados"
+- Opção "Substituir tudo" vs "Mesclar com existente"
+
+### 3.2 Mapeamento flexível de colunas
+Exibir um mapper visual onde o usuário pode associar colunas do CSV importado aos campos internos do sistema, para suportar CSVs de diferentes corretoras (XP, Rico, Clear, NuInvest, Inter etc.).
+
+---
+
+## 4. REGRAS GERAIS DE CODIFICAÇÃO
+
+### TypeScript
+- Nunca usar `any` explícito; usar `unknown` e fazer type narrowing
+- Sempre tipar o retorno de funções assíncronas: `Promise<T>`
+- Usar `satisfies` do TypeScript 4.9+ para validar objetos contra tipos
+- Preferir tipos discriminados para estados de loading/error/success:
+  ```ts
+  type AsyncState<T> = 
+    | { status: 'idle' }
+    | { status: 'loading' }
+    | { status: 'success'; data: T }
+    | { status: 'error'; message: string };
+  ```
+
+### React / Next.js
+- Server Components para fetching de dados; Client Components apenas para interatividade
+- Nunca usar `useEffect` para fetching — usar Server Components ou SWR/React Query
+- Usar `router.refresh()` após mutações em vez de recarregar a página
+- Adicionar `Suspense` boundaries em torno de componentes que fazem fetch
+
+### Formatação de valores financeiros
+Sempre usar esta função para exibir valores monetários:
+```ts
+export const formatBRL = (value: number) =>
+  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+export const formatPercent = (value: number, decimals = 2) =>
+  `${value.toFixed(decimals)}%`;
+```
+
+### Acessibilidade
+- Todos os botões de ação devem ter `aria-label` descritivo
+- Tabelas devem usar `<thead>`, `<th scope="col">`, e `<caption>` ou `aria-label`
+- Modais devem capturar foco (`focus-trap`) e fechar com `Escape`
+- Cores de estado (verde/vermelho para lucro/perda) nunca devem ser o único indicador — usar ícone ou texto junto
+
+---
+
+## 5. ESTRUTURA DE ARQUIVOS ESPERADA PÓS-REFATORAÇÃO
+## 5. ESTRUTURA DE ARQUIVOS ESPERADA PÓS-REFATORAÇÃO
+src/
+├── core/
+│ ├── domain/
+│ │ ├── types.ts ← AssetClass expandido + ASSET_CLASS_LABELS + ASSET_CLASS_COLORS
+│ │ ├── position.ts ← Position type
+│ │ ├── portfolio.ts ← PortfolioSummary, AllocationEntry
+│ │ └── validation.ts ← validatePosition(), validateCsvRow()
+│ └── services/
+│ └── portfolioService.ts
+├── infra/
+│ ├── csv/
+│ │ ├── csv-reader.ts ← Com validação de colunas obrigatórias e retorno de erros
+│ │ ├── csv-writer.ts ← Para persistir edições manuais
+│ │ ├── helpers.ts ← normalizeCurrency corrigido
+│ │ └── excelImporter.ts
+│ └── repositories/
+│ ├── portfolioRepository.ts ← Interface com updatePosition + deletePosition
+│ └── csvPortfolioRepository.ts
+└── ui/
+└── components/
+├── dashboard/
+│ ├── PortfolioOverview.tsx ← KPIs expandidos
+│ ├── AllocationCharts.tsx ← Recharts PieChart + BarChart (Client)
+│ ├── DistributionCharts.tsx ← DonutChart RF vs RV + Top 10 BarChart (Client)
+│ ├── PositionsTable.tsx ← Com filtros, ordenação, paginação, botão Editar
+│ └── EditPositionModal.tsx ← Modal de edição manual (Client)
+└── upload/
+├── CsvUploader.tsx
+├── CsvPreview.tsx ← Preview das primeiras linhas
+└── ColumnMapper.tsx ← Mapeamento visual de colunas
+
+app/
+├── page.tsx ← Server Component com unstable_cache
+├── loading.tsx ← Skeleton loader
+├── error.tsx ← Error boundary
+├── layout.tsx
+└── api/
+├── positions/
+│ └── [id]/
+│ └── route.ts ← PATCH + DELETE
+└── import/
+└── route.ts ← POST para upload de CSV
+
+text
+
+---
+
+## 6. FLUXO DE DADOS CORRETO
+CSV Upload → app/api/import/route.ts
+→ excelImporter.ts (parse + validação)
+→ csv-writer.ts (persiste em public/data/portfolio-positions.csv)
+→ revalidateTag('portfolio-positions') (invalida cache)
+
+Dashboard → app/page.tsx (Server Component)
+→ unstable_cache('portfolio-positions')
+→ CsvPortfolioRepository.getAllPositions()
+→ csv-reader.ts (lê e valida CSV)
+→ portfolioService.ts (calcula alocações, métricas)
+→ PortfolioOverview + AllocationCharts + PositionsTable
+
+Edição → PositionsTable → botão Editar → EditPositionModal
+→ PATCH /api/positions/[id]
+→ CsvPortfolioRepository.updatePosition()
+→ csv-writer.ts (reescreve CSV com posição atualizada)
+→ router.refresh() no Client Component
+
+text
+
+---
+
+## 7. COMANDOS DE DESENVOLVIMENTO
+
+```bash
+# Instalar dependências necessárias
+npm install recharts
+npm install --save-dev @types/recharts
+
+# Executar em desenvolvimento
+npm run dev
+
+# Typecheck completo
+npx tsc --noEmit
+
+# Lint
+npm run lint
+
+# Build de produção (verificar se sem erros antes de PR)
+npm run build
+```
+
+---
+
+## 8. TESTES MÍNIMOS ESPERADOS
+
+Para cada feature implementada, criar testes em `__tests__/`:
+- `helpers.test.ts` → testar `normalizeCurrency` com casos: `"1.234,56"`, `"1234.56"`, `"R$ 1.000,00"`, `"150"`, `""`, `null`
+- `csvPortfolioRepository.test.ts` → mock de `fs`, testar fallback, testar CSV inválido
+- `portfolioService.test.ts` → testar `getAllocationByAssetClass`, `getConcentrationMetrics`
+
+---
+
+*Este arquivo é a fonte de verdade para o GitHub Copilot ao trabalhar neste projeto. Todas as sugestões devem seguir a arquitetura, convenções de nomes e padrões aqui descritos.*

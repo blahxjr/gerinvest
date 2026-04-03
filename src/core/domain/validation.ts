@@ -39,6 +39,6 @@ export function validatePosition(position: unknown): { valid: true; position: Po
     return { valid: true, position: result.data as Position };
   }
 
-  const validationErrors = result.error?.errors?.map((err) => `${err.path.join('.')} ${err.message}`) ?? ['Validação inválida'];
+  const validationErrors = result.error?.issues?.map((err) => `${err.path.join('.')} ${err.message}`) ?? ['Validação inválida'];
   return { valid: false, errors: validationErrors };
 }

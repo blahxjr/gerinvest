@@ -11,7 +11,7 @@ function escapeCsvValue(value: unknown): string {
 }
 
 export async function writeCsv<T>(filePath: string, rows: T[], headers?: string[]): Promise<void> {
-  const computedHeaders = headers ?? (rows.length > 0 ? Object.keys(rows[0]) : []);
+  const computedHeaders = headers ?? (rows.length > 0 ? Object.keys(rows[0] as object) : []);
 
   const lines = [computedHeaders.join(',')];
 

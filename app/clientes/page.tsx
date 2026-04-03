@@ -1,14 +1,9 @@
 import Link from "next/link";
-import { pool } from "../../lib/db";
+import { CsvClienteRepository } from "@/infra/repositories/csvClienteRepository";
 
 export default async function ClientesPage() {
-  const result = await pool.query(
-    `SELECT id, nome, documento, email, created_at
-     FROM clientes
-     ORDER BY created_at DESC`
-  );
-
-  const clientes = result.rows;
+  const repo = new CsvClienteRepository();
+  const clientes = await repo.getAllClientes();
 
   return (
     <div className="main-card">

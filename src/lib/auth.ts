@@ -1,5 +1,5 @@
 import { compare, hash } from "bcryptjs";
-import { pool } from "@/lib/db";
+import { pool } from "./db";
 
 export async function hashPassword(password: string) {
   return await hash(password, 12);

@@ -3,9 +3,9 @@ import path from 'path';
 import { read, utils, WorkSheet } from 'xlsx';
 import { Position } from '../../core/domain/position';
 import { ImportResult, PortfolioImportMetrics } from '../../core/domain/portfolio';
-import { normalizeNumber, normalizeCurrency, normalizeString } from './helpers';
 import { validatePosition } from '../../core/domain/validation';
 import { writeCsv } from './csv-writer';
+import { RawRow, buildPositionFromRaw, detectAssetClassBySheetName } from './positionMapper';
 
 const OUTPUT_FOLDER = 'public/data';
 

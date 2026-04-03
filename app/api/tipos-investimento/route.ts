@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
-import { pool } from "../../../lib/db";
-import { requireAuth } from "@/lib/authGuard";
-import { createAuditLog } from "@/lib/audit";
-import { tipoInvestimentoSchema, TipoInvestimentoInput } from "@/lib/schemas";
-import { jsonResponse, errorResponse } from "@/lib/apiHelper";
+import { pool } from "../../../src/lib/db";
+import { requireAuth } from "../../../src/lib/authGuard";
+import { createAuditLog } from "../../../src/lib/audit";
+import { tipoInvestimentoSchema, TipoInvestimentoInput } from "../../../src/lib/schemas";
+import { jsonResponse, errorResponse } from "../../../src/lib/apiHelper";
 
 export async function GET() {
   // GET de tipos de investimento deve funcionar para o frontend sem exigir token,

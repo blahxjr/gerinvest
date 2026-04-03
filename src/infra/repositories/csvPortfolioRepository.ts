@@ -5,6 +5,7 @@ import { Position } from '../../core/domain/position';
 import { PortfolioSummary } from '../../core/domain/portfolio';
 import { PortfolioRepository } from './portfolioRepository';
 import { readCsv } from '../csv/csv-reader';
+import { writeCsv } from '../csv/csv-writer';
 import { normalizeCurrency } from '../csv/helpers';
 
 const DEFAULT_POSITIONS_CSV = path.join('public', 'data', 'portfolio-positions.csv');
@@ -37,16 +38,16 @@ export class CsvPortfolioRepository implements PortfolioRepository {
   }
 
   async getAllPositions(): Promise<Position[]> {
-    let positions = await readCsv(this.csvPath, mapRowToPosition);
+    let result = await readCsv(this.csvPath, mapRowToPosition);
 
-    if (positions.length === 0 && this.csvPath === DEFAULT_POSITIONS_CSV) {
-      positions = await readCsv(FALLBACK_POSITIONS_CSV, mapRowToPosition);
-      if (positions.length === 0) {
-        positions = await this.readAllDocsCsvs();
+    if (result.data.length === 0 && this.csvPath === DEFAULT_POSITIONS_CSV) {
+      result = await readCsv(FALLBACK_POSITIONS_CSV, mapRowToPosition);
+      if (result.data.length === 0) {
+        result.data = await this.readAllDocsCsvs();
       }
     }
 
-    return positions;
+    return result.data;
   }
 
   private async readAllDocsCsvs(): Promise<Position[]> {
@@ -58,8 +59,8 @@ export class CsvPortfolioRepository implements PortfolioRepository {
       const allPositions: Position[] = [];
       for (const file of csvFiles) {
         const filePath = path.join(folderPath, file);
-        const cnt = await readCsv(filePath, mapRowToPosition);
-        allPositions.push(...cnt);
+        const result = await readCsv(filePath, mapRowToPosition);
+        allPositions.push(...result.data);
       }
 
       return allPositions;
@@ -97,5 +98,25 @@ export class CsvPortfolioRepository implements PortfolioRepository {
     } catch {
       return undefined;
     }
+  }
+
+  async updatePosition(id: string, updates: Partial<Position>): Promise<Position> {
+    const positions = await this.getAllPositions();
+    const index = positions.findIndex(p => p.id === id);
+    if (index === -1) throw new Error('Position not found');
+
+    const updated = { ...positions[index], ...updates };
+    positions[index] = updated;
+
+    await writeCsv(this.csvPath, positions);
+    return updated;
+  }
+
+  async deletePosition(id: string): Promise<void> {
+    const positions = await this.getAllPositions();
+    const filtered = positions.filter(p => p.id !== id);
+    if (filtered.length === positions.length) throw new Error('Position not found');
+
+    await writeCsv(this.csvPath, filtered);
   }
 }

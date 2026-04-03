@@ -1,4 +1,9 @@
+'use client';
+
+import { useState, useMemo } from 'react';
 import { Position } from '@/core/domain/position';
+import { AssetClass } from '@/core/domain/types';
+import EditPositionModal from './EditPositionModal';
 
 type Props = {
   positions: Position[];
@@ -7,7 +12,32 @@ type Props = {
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
+const ITEMS_PER_PAGE = 25;
+
 export default function PositionsTable({ positions }: Props) {
+  const [editingPosition, setEditingPosition] = useState<Position | null>(null);
+  const [filters, setFilters] = useState({
+    assetClass: [] as AssetClass[],
+    institution: [] as string[],
+    search: '',
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const filteredPositions = useMemo(() => {
+    return positions.filter(p => {
+      if (filters.assetClass.length > 0 && !filters.assetClass.includes(p.assetClass)) return false;
+      if (filters.institution.length > 0 && !filters.institution.includes(p.institution)) return false;
+      if (filters.search && !p.ticker.toLowerCase().includes(filters.search.toLowerCase()) && !p.description.toLowerCase().includes(filters.search.toLowerCase())) return false;
+      return true;
+    });
+  }, [positions, filters]);
+
+  const totalPages = Math.ceil(filteredPositions.length / ITEMS_PER_PAGE);
+  const paginatedPositions = filteredPositions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  const uniqueAssetClasses = [...new Set(positions.map(p => p.assetClass))];
+  const uniqueInstitutions = [...new Set(positions.map(p => p.institution))];
+
   if (positions.length === 0) {
     return <p className="text-slate-300">Nenhuma posição encontrada. Faça o upload da planilha primeiro.</p>;
   }
@@ -15,6 +45,36 @@ export default function PositionsTable({ positions }: Props) {
   return (
     <section className="rounded-xl border border-white/10 bg-slate-800 p-4 shadow-lg">
       <h3 className="text-lg font-semibold text-sky-300 mb-3">Tabela de posições</h3>
+      
+      {/* Filtros */}
+      <div className="mb-4 space-y-2">
+        <input
+          type="text"
+          placeholder="Buscar por ticker ou descrição..."
+          value={filters.search}
+          onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+          className="w-full rounded-md bg-slate-700 border-slate-600 text-slate-100 p-2"
+        />
+        <div className="flex space-x-4">
+          <select
+            multiple
+            value={filters.assetClass}
+            onChange={(e) => setFilters({ ...filters, assetClass: Array.from(e.target.selectedOptions, o => o.value as AssetClass) })}
+            className="rounded-md bg-slate-700 border-slate-600 text-slate-100 p-2"
+          >
+            {uniqueAssetClasses.map(ac => <option key={ac} value={ac}>{ac}</option>)}
+          </select>
+          <select
+            multiple
+            value={filters.institution}
+            onChange={(e) => setFilters({ ...filters, institution: Array.from(e.target.selectedOptions, o => o.value) })}
+            className="rounded-md bg-slate-700 border-slate-600 text-slate-100 p-2"
+          >
+            {uniqueInstitutions.map(inst => <option key={inst} value={inst}>{inst}</option>)}
+          </select>
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm text-slate-200">
           <thead>
@@ -27,10 +87,11 @@ export default function PositionsTable({ positions }: Props) {
               <th className="px-3 py-2">Preço</th>
               <th className="px-3 py-2">Valor</th>
               <th className="px-3 py-2">% Carteira</th>
+              <th className="px-3 py-2">Ações</th>
             </tr>
           </thead>
           <tbody>
-            {positions.map((p) => (
+            {paginatedPositions.map((p) => (
               <tr key={p.id} className="border-b border-white/10 hover:bg-slate-900">
                 <td className="px-3 py-2">{p.ticker}</td>
                 <td className="px-3 py-2">{p.description}</td>
@@ -40,11 +101,48 @@ export default function PositionsTable({ positions }: Props) {
                 <td className="px-3 py-2">{formatCurrency(p.price)}</td>
                 <td className="px-3 py-2">{formatCurrency(p.grossValue)}</td>
                 <td className="px-3 py-2">{(p.grossValue / Math.max(1, positions.reduce((sum, q) => sum + q.grossValue, 0)) * 100).toFixed(2)}%</td>
+                <td className="px-3 py-2">
+                  <button
+                    onClick={() => setEditingPosition(p)}
+                    className="text-sky-400 hover:text-sky-200 transition-colors p-1 rounded"
+                    aria-label={`Editar posição ${p.ticker}`}
+                  >
+                    Editar
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Paginação */}
+      <div className="mt-4 flex justify-between items-center">
+        <p className="text-slate-300">Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredPositions.length)} de {filteredPositions.length} posições</p>
+        <div className="space-x-2">
+          <button
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 bg-slate-600 text-slate-100 rounded disabled:opacity-50"
+          >
+            Anterior
+          </button>
+          <button
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 bg-slate-600 text-slate-100 rounded disabled:opacity-50"
+          >
+            Próximo
+          </button>
+        </div>
+      </div>
+
+      {editingPosition && (
+        <EditPositionModal
+          position={editingPosition}
+          onClose={() => setEditingPosition(null)}
+        />
+      )}
     </section>
   );
 }

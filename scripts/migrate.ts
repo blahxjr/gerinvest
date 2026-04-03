@@ -1,4 +1,4 @@
-import { pool } from "../lib/db";
+import { pool } from "../src/lib/db";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
 

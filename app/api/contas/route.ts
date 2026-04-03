@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { pool } from "../../../lib/db";
+import { pool } from "@/lib/db";
 import { requireAuth } from "@/lib/authGuard";
 import { createAuditLog } from "@/lib/audit";
 import { contaSchema, ContaInput } from "@/lib/schemas";
