@@ -1,19 +1,13 @@
 # GerInvest 📈
 
-![Next.js](https://img.shields.io/badge/Next.js-16.2.1-black?style=flat-square&logo=next.js)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)
-![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4-cyan?style=flat-square&logo=tailwind-css)
-![Recharts](https://img.shields.io/badge/Recharts-3.8.1-red?style=flat-square&logo=recharts)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue?style=flat-square&logo=postgresql)
+![Next.js](https://img.shields.io/badge/Next.js-16+-black?style=flat-square&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue?style=flat-square&logo=typescript)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4+-cyan?style=flat-square&logo=tailwindcss)
+![React](https://img.shields.io/badge/React-19+-blue?style=flat-square&logo=react)
+![Recharts](https://img.shields.io/badge/Recharts-3+-red?style=flat-square&logo=recharts)
 ![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?style=flat-square&logo=vercel)
 
-> Plataforma web para gerenciamento e visualização de carteira de investimentos brasileira, com suporte a importação manual de CSVs gerados a partir de planilhas do Google Drive.
-
-<!-- Screenshot: Dashboard principal -->
-<!-- ![Dashboard](screenshots/dashboard.png) -->
-
-<!-- Screenshot: Tabela de posições -->
-<!-- ![Positions Table](screenshots/positions-table.png) -->
+> Plataforma de gerenciamento de carteira de investimentos com importação de planilhas Excel e visualização interativa de posições.
 
 ## 🚀 Funcionalidades
 
@@ -26,133 +20,158 @@
 
 ## 🛠️ Stack Tecnológica
 
-| Camada | Tecnologia | Versão |
-|---|---|---|
-| **Frontend** | Next.js | 16.2.1 (App Router) |
-| **Linguagem** | TypeScript | 5.x |
-| **Estilização** | TailwindCSS | 4.x |
-| **Gráficos** | Recharts | 3.8.1 |
-| **Parsing CSV/Excel** | csv-parse, xlsx | 6.2.1, 0.18.5 |
-| **Banco de Dados** | PostgreSQL | (futuro: histórico/audit) |
-| **Autenticação** | NextAuth.js | 4.24.13 (futuro) |
-| **Deploy** | Vercel | (planejado) |
+| Camada | Tecnologia |
+|--------|-----------|
+| **Frontend** | Next.js (App Router) |
+| **Linguagem** | TypeScript |
+| **Estilização** | TailwindCSS |
+| **Gráficos** | Recharts |
+| **CSV/Excel** | csv-parse, xlsx |
+| **Build** | ESLint |
 
 ## 📋 Pré-requisitos
 
-- Node.js 18+ (recomendado 20+)
+- Node.js 18+
 - npm ou yarn
-- PostgreSQL (opcional, para futuras funcionalidades)
 
-## 🚀 Instalação e Execução Local
+## 🚀 Instalação e Execução
+```bash
+# 1. Clone o repositório
+git clone https://github.com/blahxjr/gerinvest.git
+cd gerinvest
 
-1. **Clone o repositório**:
-   ```bash
-   git clone <url-do-repositorio>
-   cd gerinvest
-   ```
+# 2. Instale as dependências
+npm install
 
-2. **Instale as dependências**:
-   ```bash
-   npm install
-   ```
+# 3. Execute em desenvolvimento
+npm run dev
 
-3. **Configure variáveis de ambiente** (opcional):
-   - Copie `.env.example` para `.env.local` (se existir)
-   - Configure `DATABASE_URL` para PostgreSQL (futuro)
-
-4. **Execute o projeto**:
-   ```bash
-   npm run dev
-   ```
-   - Abra http://localhost:3000
-
-5. **Build de produção**:
-   ```bash
-   npm run build
-   npm start
-   ```
+# 4. Acesse http://localhost:3000
+```
 
 ## ⚙️ Scripts Disponíveis
 
-- `npm run dev` — Executa em modo desenvolvimento
-- `npm run build` — Build de produção
-- `npm run start` — Executa build de produção
-- `npm run lint` — Executa ESLint
-- `npm run db:migrate` — Executa migrações do banco (futuro)
+```bash
+npm run dev          # Desenvolvimento com hot reload
+npm run build        # Build de produção
+npm run start        # Servidor de produção
+npm run lint         # Verificação com ESLint
+npm run db:migrate   # Migrações do banco de dados
+```
 
-## 🏗️ Arquitetura
+## 🗂️ Estrutura do Projeto
+
+```
+gerinvest/
+├── app/
+│   ├── api/                    # API Routes
+│   │   ├── auth/               # Autenticação
+│   │   ├── positions/          # CRUD de posições
+│   │   ├── upload-positions/   # Upload de arquivos
+│   │   └── ...
+│   ├── ativos/                 # Gestão de ativos
+│   ├── clientes/               # Gestão de clientes
+│   ├── contas/                 # Gestão de contas
+│   ├── importacao/             # Página de importação
+│   ├── posicoes/               # Página de posições
+│   ├── login/                  # Autenticação
+│   ├── page.tsx                # Dashboard principal
+│   └── layout.tsx
+│
+├── src/
+│   ├── core/                   # Lógica de negócio
+│   │   ├── domain/             # Tipos e entidades
+│   │   └── services/           # Serviços
+│   ├── infra/                  # Infraestrutura
+│   │   ├── csv/                # Processamento de CSV
+│   │   └── repositories/       # Persistência
+│   └── ui/components/          # Componentes React
+│
+├── public/data/                # CSVs gerados
+├── docs/                       # Documentação técnica
+├── package.json
+├── tsconfig.json
+├── next.config.ts
+└── README.md
+```
+
+## 📡 Arquitetura
 
 ```mermaid
 graph TD
-    A[Usuário] -->|Upload Excel| B[Next.js App]
+    A[Usuário] -->|Upload Excel| B[Next.js App Router]
     B -->|Parse Excel| C[excelImporter.ts]
     C -->|Gera CSVs| D[public/data/*.csv]
-    B -->|Lê Dados| E[CsvPortfolioRepository]
-    E -->|Calcula KPIs| F[portfolioService.ts]
-    F -->|Renderiza| G[Dashboard Components]
-    B -->|Edita Posição| H[PATCH /api/positions/[id]]
-    H -->|Atualiza CSV| I[csv-writer.ts]
-    B -->|Cache| J[unstable_cache]
+    B -->|Cache| E[unstable_cache]
+    E -->|Lê dados| F[CsvPortfolioRepository]
+    F -->|Calcula KPIs| G[portfolioService.ts]
+    G -->|Renderiza| H[Dashboard React]
+    H -->|Gráficos| I[Recharts]
 ```
 
-### Fluxo de Dados
-1. Usuário faz upload de planilha Excel do Google Drive
-2. `excelImporter` processa e gera CSVs estruturados
-3. `CsvPortfolioRepository` lê os CSVs
-4. `portfolioService` calcula métricas e alocações
-5. Componentes React renderizam dashboard com Recharts
-6. Edições manuais atualizam CSVs via API Routes
+**Fluxo Principal:**
+1. Usuário faz upload de planilha Excel
+2. `excelImporter` converte para CSVs estruturados
+3. `CsvPortfolioRepository` carrega os dados
+4. `portfolioService` calcula alocações e métricas
+5. Dashboard exibe KPIs e gráficos com Recharts
+6. Edições manuais via API atualizam os CSVs
 
-## 🔌 APIs e Integrações
+## � Armazenamento de Dados
 
-### Upload de Planilhas
-- **Fonte**: Planilhas Excel salvas no Google Drive
-- **Processamento**: Conversão para CSVs estruturados via `excelImporter.ts`
-- **Armazenamento**: Arquivos CSV em `public/data/`
+**Atual:**
+- CSV em `public/data/` para posições
+- `.env.local` para variáveis locais
 
-### Futuras Integrações
-- API da B3 via Brapi (cotações em tempo real)
-- Firebase Firestore (armazenamento NoSQL)
-- PostgreSQL (dados históricos e relatórios)
+**Planejado:**
+- PostgreSQL para histórico e auditoria
+- NextAuth.js para autenticação multi-usuário
 
 ## 🔐 Segurança
 
 - Middleware Next.js para proteção de rotas
-- Validação de dados com Zod
-- Sanitização de inputs
-- Futuro: Autenticação com NextAuth.js
+- Validação com Zod
+- Tipagem TypeScript em tempo de compilação
 
-## 🚢 Deploy
+## 🚢 Build e Deploy
 
-### Vercel (Recomendado)
-1. Conecte o repositório no Vercel
-2. Configure variáveis de ambiente
-3. Deploy automático em cada push
+```bash
+npm run build   # Build de produção (.next/)
+npm run start   # Servidor de produção
+```
 
-### Outras Opções
-- Docker (futuro)
+Pronto para deploy em:
+- Vercel (recomendado)
+- Docker
 - Railway, Render ou similar
+
+## 📚 Documentação Adicional
+
+- [GETTING_STARTED.md](docs/GETTING_STARTED.md) — Guia para desenvolvedores novos
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) — Arquitetura técnica e decisões
+- [API.md](docs/API.md) — Referência de endpoints
+- [DOMAIN_MODEL.md](docs/DOMAIN_MODEL.md) — Modelo de domínio
 
 ## 🗺️ Roadmap
 
-- [ ] Autenticação completa (NextAuth.js)
-- [ ] Integração real com API B3
-- [ ] Relatórios mensais/anuais
-- [ ] Notificações de dividendos
-- [ ] App mobile (React Native)
+- [ ] Autenticação com NextAuth.js
+- [ ] Integração com PostgreSQL para histórico
+- [ ] APIs externas (cotações em tempo real)
+- [ ] Relatórios e análises avançadas
+- [ ] Interface mobile responsiva
 
-## 🤝 Contribuição
+## 🤝 Contribuindo
 
 1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
-3. Commit suas mudanças (`git commit -am 'Adiciona nova feature'`)
-4. Push para a branch (`git push origin feature/nova-feature`)
+2. Crie uma feature branch (`git checkout -b feature/minha-feature`)
+3. Commit as mudanças (`git commit -am 'feat: adiciona minha feature'`)
+4. Push para a branch (`git push origin feature/minha-feature`)
 5. Abra um Pull Request
 
 ## 📄 Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para detalhes.
+Este projeto é licenciado sob a MIT License — veja [LICENSE](LICENSE) para detalhes.
 
 ---
 
-*GerInvest — Simplificando o gerenciamento de investimentos brasileiros.*
+**Desenvolvido com ❤️ para investidores brasileiros**
