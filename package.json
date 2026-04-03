@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:migrate": "npx tsx scripts/migrate.ts"
+    "db:migrate": "npx tsx scripts/migrate.ts",
+    "db:diagnose": "node scripts/diagnose-postgres.js"
   },
   "dependencies": {
     "@auth/core": "^0.41.1",
