@@ -49,13 +49,14 @@ Com diagnóstico inteligente de diversificação por perfil.
 
 | Tarefa | Descrição | Status | Bloqueador? |
 |--------|-----------|--------|------------|
-| **A** | Formalizar memória do projeto (docs coerentes) | ✅ COMPLETA | Sim — outras dependem |
-| **B** | Formalize multiativo taxonomy em code (tipos) | ✅ COMPLETA | Depende A ✓ |
-| **C** | Crie serviços de análise | ✅ COMPLETA | Depende B ✓ |
-| **D** | Migrations para multiativo schema | ⏳ Pronto | Depende A ✓ |
-| **E** | UI expandida para cadastro | ⏳ Pronto | Depende B✓, C✓, D |
+| **A** | Formalizar memória do projeto (docs coerentes) | ✅ COMPLETA | ~~Sim~~ |
+| **B** | Formalize multiativo taxonomy em code (tipos) | ✅ COMPLETA | ~~Sim~~ |
+| **C** | Crie serviços de análise | ✅ COMPLETA | ~~Sim~~ |
+| **D** | Migrations para multiativo schema | ✅ COMPLETA | ~~Sim~~ |
+| **E** | UI expandida para cadastro | ⏳ **PRONTA** | Pronto! ✓ |
 
-### Resumo das Tarefas Completas
-- ✅ **A1-A4**: Documentação coerente e navegável
-- ✅ **B1-B5**: 13 ClasseAtivo + 17 SubclasseAtivo em TypeScript
-- ✅ **C1-C5**: 5 serviços de análise criados (1.415 linhas)
+### 🏁 Tarefas Completas (A-D)
+- ✅ **A**: Documentação coerente (11 arquivos em docs/ai/)
+- ✅ **B**: 13 ClasseAtivo + 17 SubclasseAtivo em TypeScript
+- ✅ **C**: 5 serviços de análise (1.415 linhas)
+- ✅ **D**: Migrations + schema PostgreSQL (250 linhas SQL)
