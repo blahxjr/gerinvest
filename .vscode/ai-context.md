@@ -50,15 +50,12 @@ Com diagnóstico inteligente de diversificação por perfil.
 | Tarefa | Descrição | Status | Bloqueador? |
 |--------|-----------|--------|------------|
 | **A** | Formalizar memória do projeto (docs coerentes) | ✅ COMPLETA | Sim — outras dependem |
-| **B** | Formalize multiativo taxonomy em code (tipos) | ⏳ Planejada | Depende A ✓ |
-| **C** | Crie serviços de análise | ⏳ Planejada | Depende B |
-| **D** | Migrations para multiativo schema | ⏳ Planejada | Depende A |
-| **E** | UI expandida para cadastro | ⏳ Planejada | Depende B, C, D |
+| **B** | Formalize multiativo taxonomy em code (tipos) | ✅ COMPLETA | Depende A ✓ |
+| **C** | Crie serviços de análise | ✅ COMPLETA | Depende B ✓ |
+| **D** | Migrations para multiativo schema | ⏳ Pronto | Depende A ✓ |
+| **E** | UI expandida para cadastro | ⏳ Pronto | Depende B✓, C✓, D |
 
-### Tarefa A — Subtasks Completadas
-- ✅ **A1**: Validar cobertura de 11 arquivos em `docs/ai/`
-- ✅ **A2**: Sincronizar inconsistências (Estado de Implementação adicionado a `01-project-analysis.md`)
-- ✅ **A3**: Melhorar navegação (Índice criado em `01-project-analysis.md` + `.vscode/ai-context.md` atualizado)
-- ✅ **A4**: Criar checklist (Checklist Antes de Implementar em `01-project-analysis.md`)
-
-**Próximo passo seguro:** Tarefa B (formalize multiativo em TypeScript)
+### Resumo das Tarefas Completas
+- ✅ **A1-A4**: Documentação coerente e navegável
+- ✅ **B1-B5**: 13 ClasseAtivo + 17 SubclasseAtivo em TypeScript
+- ✅ **C1-C5**: 5 serviços de análise criados (1.415 linhas)
