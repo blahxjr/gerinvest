@@ -16,7 +16,7 @@ export default function DashboardClient({ children }: DashboardClientProps) {
         <section className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <div className="flex flex-col gap-1">
-              <h1 className="text-3xl font-bold text-sky-400">Dashboard da Carteira</h1>
+              <h1 className="text-3xl font-bold text-sky-400">Painel da Carteira</h1>
               <p className="text-slate-300">Resumo de posições e alocação a partir de CSVs importados.</p>
             </div>
             <button
