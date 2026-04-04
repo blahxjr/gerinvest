@@ -6,7 +6,7 @@ import {
   analyzeFixedIncome,
   analyzeFunds,
 } from '@/core/services';
-import { CsvPortfolioRepository } from '@/infra/repositories/csvPortfolioRepository';
+import { getPortfolioRepository } from '@/infra/repositories/postgresPortfolioRepository';
 
 type AnalysisType = 'diversification' | 'fiis' | 'crypto' | 'fixedIncome' | 'funds' | 'all';
 
@@ -15,12 +15,12 @@ export async function POST(req: NextRequest) {
     const { analysisType } = (await req.json()) as { analysisType?: AnalysisType };
     const queryType = analysisType || 'all';
 
-    const repo = new CsvPortfolioRepository();
-    const positions = await repo.getAllPositions();
+    const repo = getPortfolioRepository();
+    const positions = await repo.getAllPositionsEnriched();
 
     if (positions.length === 0) {
       return NextResponse.json(
-        { error: 'Nenhuma posição encontrada para análise' },
+        { error: 'Nenhuma posição encontrada para análise. Importe uma planilha primeiro.' },
         { status: 400 }
       );
     }
@@ -30,19 +30,15 @@ export async function POST(req: NextRequest) {
     if (queryType === 'all' || queryType === 'diversification') {
       results.diversification = analyzeDiversification(positions);
     }
-
     if (queryType === 'all' || queryType === 'fiis') {
       results.fiis = analyzeFiis(positions);
     }
-
     if (queryType === 'all' || queryType === 'crypto') {
       results.crypto = analyzeCrypto(positions);
     }
-
     if (queryType === 'all' || queryType === 'fixedIncome') {
       results.fixedIncome = analyzeFixedIncome(positions);
     }
-
     if (queryType === 'all' || queryType === 'funds') {
       results.funds = analyzeFunds(positions);
     }

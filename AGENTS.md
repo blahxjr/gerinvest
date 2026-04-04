@@ -1,5 +1,15 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+---
+name: gerinvest-team
+description: Time de agentes para GerInvest
+---
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+# GerInvest Agent Team
+
+## Agentes disponíveis
+
+| `@gerinvest-architect` | Arquitetura, schema PostgreSQL, planejamento |
+| `@gerinvest-db` | Migrations, queries, banco |
+| `@gerinvest-ui` | React, formulários dinâmicos, dashboard |
+| `@gerinvest-diversify` | Análise financeira, diversificação |
+
+**Sempre leia `docs/ai/` antes de codar.**

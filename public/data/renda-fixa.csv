@@ -1,0 +1,4 @@
+id,nome,classe,ticker,descricao,instituicao,conta,quantidade,precoMedio,valorAtualBruto,valorAtualBrl,moedaOriginal,dataEntrada,dataVencimento
+RENDA_FIXA-CDB2261M8JC--jb68fpu8,CDB - BANCO BTG PACTUAL S.A.,RENDA_FIXA,CDB2261M8JC,,BANCO BTG PACTUAL S.A.,,2,0,0,0,BRL,,
+RENDA_FIXA-CDB424465J0--lj63jub5,CDB - BANCO C6 CONSIGNADO S.A,RENDA_FIXA,CDB424465J0,,NU INVEST CORRETORA DE VALORES S.A.,,8000,0,0,0,BRL,,
+RENDA_FIXA-BRSTNCNTF204--rjokvjt6,Tesouro Prefixado com Juros Semestrais 2031,RENDA_FIXA,BRSTNCNTF204,,NU INVEST CORRETORA DE VALORES S.A.,,0.08,0,0,0,BRL,,

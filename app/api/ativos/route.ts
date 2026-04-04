@@ -4,9 +4,28 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getPortfolioRepository } from '@/infra/repositories/postgresPortfolioRepository';
-import { CreateAtivoInput } from '@/core/domain/entities';
 import { ClasseAtivo } from '@/core/domain/types';
+
+const CLASSE_ATIVO_VALUES = [
+  'ACAO_BR', 'FII', 'ETF_BR', 'BDR', 'ACAO_EUA', 'ETF_EUA',
+  'REIT', 'FUNDO', 'CRIPTO', 'RENDA_FIXA', 'POUPANCA', 'PREVIDENCIA', 'ALTERNATIVO',
+] as const;
+
+const createAtivoSchema = z.object({
+  ticker: z.string().max(20).optional(),
+  nome: z.string().min(1, 'Nome é obrigatório').max(200),
+  classe: z.enum(CLASSE_ATIVO_VALUES, { errorMap: () => ({ message: 'Classe de ativo inválida' }) }),
+  subclasse: z.string().max(50).optional(),
+  pais: z.string().max(3).optional(),
+  moeda: z.enum(['BRL', 'USD', 'EUR']).default('BRL'),
+  setor: z.string().max(100).optional(),
+  segmento: z.string().max(100).optional(),
+  benchmark: z.string().max(50).optional(),
+  indexador: z.string().max(50).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
 
 export async function GET(req: NextRequest) {
   try {
@@ -34,30 +53,17 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const input: CreateAtivoInput = {
-      ticker: body.ticker,
-      nome: body.nome,
-      classe: body.classe,
-      subclasse: body.subclasse,
-      pais: body.pais,
-      moeda: body.moeda,
-      setor: body.setor,
-      segmento: body.segmento,
-      benchmark: body.benchmark,
-      indexador: body.indexador,
-      metadata: body.metadata,
-    };
-
-    if (!input.nome || !input.classe) {
+    const body = await req.json().catch(() => null);
+    const parsed = createAtivoSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Campos "nome" e "classe" são obrigatórios' },
+        { error: 'Dados inválidos', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
     const repo = getPortfolioRepository();
-    const ativo = await repo.createAtivo(input);
+    const ativo = await repo.createAtivo(parsed.data);
     return NextResponse.json(ativo, { status: 201 });
   } catch (error) {
     console.error('POST /api/ativos error:', error);

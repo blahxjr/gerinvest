@@ -147,6 +147,16 @@ export class PostgresPortfolioRepository {
     return result.rows[0] ? this.parseAtivo(result.rows[0]) : null;
   }
 
+  async getAtivoByTicker(ticker: string): Promise<Ativo | null> {
+    const query = `
+      SELECT id, ticker, nome, classe, subclasse, pais, moeda, setor, segmento, benchmark, indexador, metadata,
+             criado_em as "criadoEm", atualizado_em as "atualizadoEm"
+      FROM ativos WHERE ticker = $1
+    `;
+    const result = await this.pool.query(query, [ticker]);
+    return result.rows[0] ? this.parseAtivo(result.rows[0]) : null;
+  }
+
   async getAtivosByClasse(classe: ClasseAtivo): Promise<Ativo[]> {
     const query = `
       SELECT id, ticker, nome, classe, subclasse, pais, moeda, setor, segmento, benchmark, indexador, metadata,
@@ -300,7 +310,6 @@ export class PostgresPortfolioRepository {
                 valor_atual_bruto as "valorAtualBruto", valor_atual_brl as "valorAtualBrl", moeda_original as "moedaOriginal",
                 instituicao, conta, custodia, data_entrada as "dataEntrada", data_vencimento as "dataVencimento",
                 atualizado_em as "atualizadoEm"
-      WHERE id = $1
     `;
     const result = await this.pool.query(query, values);
     return result.rows[0];
@@ -360,13 +369,87 @@ export class PostgresPortfolioRepository {
   }
 
   /**
+   * ========== POSIÇÕES ENRIQUECIDAS (JOIN com ativos) ==========
+   * Retorna objetos compatíveis com Position (domínio), incluindo campos do ativo.
+   */
+
+  async getPositionsEnriched(carteiraId: string): Promise<any[]> {
+    const query = `
+      SELECT
+        p.id,
+        p.carteira_id as "carteiraId",
+        p.quantidade as quantity,
+        p.preco_medio as price,
+        p.valor_atual_bruto as "grossValue",
+        p.valor_atual_bruto as "valorAtualBruto",
+        p.valor_atual_brl as "valorAtualBrl",
+        p.moeda_original as "moedaOriginal",
+        p.moeda_original as currency,
+        p.instituicao as institution,
+        p.conta as account,
+        p.custodia,
+        p.data_entrada as "dataEntrada",
+        p.data_vencimento as "dataVencimento",
+        p.atualizado_em as "atualizadoEm",
+        a.ticker,
+        a.nome,
+        a.nome as description,
+        a.classe,
+        a.classe as "assetClass",
+        a.subclasse,
+        a.indexador as indexer,
+        a.setor
+      FROM posicoes p
+      JOIN ativos a ON p.ativo_id = a.id
+      WHERE p.carteira_id = $1
+      ORDER BY p.valor_atual_brl DESC
+    `;
+    const result = await this.pool.query(query, [carteiraId]);
+    return result.rows;
+  }
+
+  async getAllPositionsEnriched(): Promise<any[]> {
+    const query = `
+      SELECT
+        p.id,
+        p.carteira_id as "carteiraId",
+        p.quantidade as quantity,
+        p.preco_medio as price,
+        p.valor_atual_bruto as "grossValue",
+        p.valor_atual_bruto as "valorAtualBruto",
+        p.valor_atual_brl as "valorAtualBrl",
+        p.moeda_original as "moedaOriginal",
+        p.moeda_original as currency,
+        p.instituicao as institution,
+        p.conta as account,
+        p.custodia,
+        p.data_entrada as "dataEntrada",
+        p.data_vencimento as "dataVencimento",
+        p.atualizado_em as "atualizadoEm",
+        a.ticker,
+        a.nome,
+        a.nome as description,
+        a.classe,
+        a.classe as "assetClass",
+        a.subclasse,
+        a.indexador as indexer,
+        a.setor
+      FROM posicoes p
+      JOIN ativos a ON p.ativo_id = a.id
+      ORDER BY p.valor_atual_brl DESC
+    `;
+    const result = await this.pool.query(query);
+    return result.rows;
+  }
+
+  /**
    * ========== UTILITÁRIOS ==========
    */
 
   private parseAtivo(row: any): Ativo {
     return {
       ...row,
-      metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
+      metadata: row.metadata || undefined,
     };
   }
 

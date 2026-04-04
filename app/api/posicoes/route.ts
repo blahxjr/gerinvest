@@ -4,8 +4,23 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getPortfolioRepository } from '@/infra/repositories/postgresPortfolioRepository';
-import { CreatePosicaoInput } from '@/core/domain/entities';
+
+const createPosicaoSchema = z.object({
+  carteiraId: z.string().uuid('carteiraId deve ser um UUID válido'),
+  ativoId: z.string().uuid('ativoId deve ser um UUID válido'),
+  quantidade: z.number().nonnegative().optional(),
+  precoMedio: z.number().nonnegative().optional(),
+  valorAtualBruto: z.number().nonnegative().optional(),
+  valorAtualBrl: z.number().nonnegative('valorAtualBrl é obrigatório e deve ser ≥ 0'),
+  moedaOriginal: z.enum(['BRL', 'USD', 'EUR']).default('BRL'),
+  instituicao: z.string().max(100).optional(),
+  conta: z.string().max(100).optional(),
+  custodia: z.string().max(100).optional(),
+  dataEntrada: z.string().optional(),
+  dataVencimento: z.string().optional(),
+});
 
 export async function GET(req: NextRequest) {
   try {
@@ -33,31 +48,17 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const input: CreatePosicaoInput = {
-      carteiraId: body.carteiraId,
-      ativoId: body.ativoId,
-      quantidade: body.quantidade,
-      precoMedio: body.precoMedio,
-      valorAtualBruto: body.valorAtualBruto,
-      valorAtualBrl: body.valorAtualBrl,
-      moedaOriginal: body.moedaOriginal || 'BRL',
-      instituicao: body.instituicao,
-      conta: body.conta,
-      custodia: body.custodia,
-      dataEntrada: body.dataEntrada,
-      dataVencimento: body.dataVencimento,
-    };
-
-    if (!input.carteiraId || !input.ativoId || input.valorAtualBrl === undefined) {
+    const body = await req.json().catch(() => null);
+    const parsed = createPosicaoSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Campos "carteiraId", "ativoId" e "valorAtualBrl" são obrigatórios' },
+        { error: 'Dados inválidos', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
     const repo = getPortfolioRepository();
-    const posicao = await repo.createPosicao(input);
+    const posicao = await repo.createPosicao(parsed.data);
     return NextResponse.json(posicao, { status: 201 });
   } catch (error) {
     console.error('POST /api/posicoes error:', error);
