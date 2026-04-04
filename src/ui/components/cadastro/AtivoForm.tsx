@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ClasseAtivo, SubclasseAtivo, CreateAtivoInput } from '@/core/domain/entities';
+import { Currency } from '@/core/domain/types';
 
 type AtivoFormProps = {
   onSubmit: (data: CreateAtivoInput) => Promise<void>;
@@ -61,6 +62,15 @@ const SUBCLASSE_BY_CLASSE: Record<ClasseAtivo, SubclasseAtivo[]> = {
   ALTERNATIVO: [] as SubclasseAtivo[],
 };
 
+const PAISES: Record<string, string> = {
+  BRA: 'Brasil',
+  USA: 'Estados Unidos',
+  CHN: 'China',
+  GBR: 'Reino Unido',
+  JPN: 'Japão',
+  EUR: 'Europa (genérico)',
+};
+
 export default function AtivoForm({ onSubmit, onCancel, isLoading = false }: AtivoFormProps) {
   const [form, setForm] = useState({
     ticker: '',
@@ -68,8 +78,8 @@ export default function AtivoForm({ onSubmit, onCancel, isLoading = false }: Ati
     classe: 'ACAO_BR' as ClasseAtivo,
     subclasse: undefined as SubclasseAtivo | undefined,
     setor: '',
-    pais: 'Brasil',
-    moeda: 'BRL' as any,
+    pais: 'BRA',
+    moeda: 'BRL' as Currency,
     segmento: '',
     indexador: '',
     metadata: '',
@@ -138,7 +148,7 @@ export default function AtivoForm({ onSubmit, onCancel, isLoading = false }: Ati
       classe: novaClasse,
       subclasse: novaSubclasse,
       setor: '',
-      pais: novaClasse.includes('EUA') ? 'USA' : 'Brasil',
+      pais: novaClasse.includes('EUA') ? 'USA' : 'BRA',
       segmento: '',
       indexador: '',
     });
@@ -233,15 +243,19 @@ export default function AtivoForm({ onSubmit, onCancel, isLoading = false }: Ati
           <label htmlFor="pais" className="block text-sm font-medium text-slate-200 mb-1">
             País
           </label>
-          <input
+          <select
             id="pais"
-            type="text"
             value={form.pais}
             onChange={(e) => setForm({ ...form, pais: e.target.value })}
             className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-700 text-white"
-            placeholder="Ex: Brasil"
             disabled={isLoading || submitting}
-          />
+          >
+            {Object.entries(PAISES).map(([codigo, nome]) => (
+              <option key={codigo} value={codigo}>
+                {nome} ({codigo})
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>
@@ -251,7 +265,7 @@ export default function AtivoForm({ onSubmit, onCancel, isLoading = false }: Ati
           <select
             id="moeda"
             value={form.moeda}
-            onChange={(e) => setForm({ ...form, moeda: e.target.value as any })}
+            onChange={(e) => setForm({ ...form, moeda: e.target.value as Currency })}
             className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-700 text-white"
             disabled={isLoading || submitting}
           >

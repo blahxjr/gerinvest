@@ -35,6 +35,7 @@ const providers: NextAuthOptions["providers"] = [
         name: user.name,
         email: user.email,
         image: user.avatar_url ?? null,
+        role: user.role ?? "CLIENT",
       };
     },
   }),
@@ -49,35 +50,28 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   );
 }
 
-const authOptions = {
+const authOptions: NextAuthOptions = {
   providers,
   adapter: PostgresAdapter(pool) as Adapter,
   secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
   session: {
-    strategy: "database" as const,
+    // JWT strategy required for middleware getToken() to work correctly
+    strategy: "jwt",
   },
   callbacks: {
     async jwt({ token, user }: { token: JWT; user?: User }) {
-      const role = (user as { role?: string } | undefined)?.role;
-      if (role) {
-        return {
-          ...token,
-          role,
-        };
+      // On first sign-in, user object is available — persist role into the token
+      if (user) {
+        token.role = (user as User & { role?: string }).role ?? "CLIENT";
+        token.sub = user.id;
       }
       return token;
     },
     async session({ session, token }: { session: Session; token: JWT }) {
       if (session.user) {
-        const currentUser = session.user as Session["user"] & { role?: string; id?: string };
-        const tokenWithRole = token as JWT & { role?: string; picture?: string | null };
-
-        session.user = {
-          ...currentUser,
-          id: tokenWithRole.sub ?? currentUser.id,
-          role: tokenWithRole.role ?? currentUser.role,
-          image: tokenWithRole.picture ?? session.user.image,
-        } as Session["user"];
+        const tokenWithRole = token as JWT & { role?: string };
+        (session.user as Session["user"] & { id?: string; role?: string }).id = tokenWithRole.sub;
+        (session.user as Session["user"] & { id?: string; role?: string }).role = tokenWithRole.role ?? "CLIENT";
       }
       return session;
     },

@@ -1,8 +1,14 @@
-import { CsvPortfolioRepository } from "@/infra/repositories/csvPortfolioRepository";
+import { getPortfolioRepository } from "@/infra/repositories/postgresPortfolioRepository";
+import { ASSET_CLASS_LABELS } from "@/core/domain/types";
 
 export default async function PosicoesPage() {
-  const repo = new CsvPortfolioRepository();
-  const positions = await repo.getAllPositions();
+  let positions: any[] = [];
+  try {
+    const repo = getPortfolioRepository();
+    positions = await repo.getAllPositionsEnriched();
+  } catch {
+    // banco indisponível — exibe tabela vazia com mensagem
+  }
 
   return (
     <div className="main-card">
@@ -21,27 +27,35 @@ export default async function PosicoesPage() {
               <th style={{ padding: "12px" }}>Instituição</th>
               <th style={{ padding: "12px" }}>Conta</th>
               <th style={{ padding: "12px" }}>Quantidade</th>
-              <th style={{ padding: "12px" }}>Preço</th>
-              <th style={{ padding: "12px" }}>Valor</th>
+              <th style={{ padding: "12px" }}>Preço Médio</th>
+              <th style={{ padding: "12px" }}>Valor (R$)</th>
             </tr>
           </thead>
           <tbody>
             {positions.map((pos) => (
               <tr key={pos.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                <td style={{ padding: "12px" }}>{pos.ticker}</td>
-                <td style={{ padding: "12px" }}>{pos.description || '-'}</td>
-                <td style={{ padding: "12px" }}>{pos.assetClass || '-'}</td>
-                <td style={{ padding: "12px" }}>{pos.institution || '-'}</td>
-                <td style={{ padding: "12px" }}>{pos.account || '-'}</td>
-                <td style={{ padding: "12px" }}>{pos.quantity || 0}</td>
-                <td style={{ padding: "12px" }}>{(pos.price ?? 0).toFixed(2)}</td>
-                <td style={{ padding: "12px" }}>{(pos.grossValue ?? 0).toFixed(2)}</td>
+                <td style={{ padding: "12px" }}>{pos.ticker || "-"}</td>
+                <td style={{ padding: "12px" }}>{pos.description || pos.nome || "-"}</td>
+                <td style={{ padding: "12px" }}>
+                  {ASSET_CLASS_LABELS[pos.classe as keyof typeof ASSET_CLASS_LABELS] || pos.classe || "-"}
+                </td>
+                <td style={{ padding: "12px" }}>{pos.institution || "-"}</td>
+                <td style={{ padding: "12px" }}>{pos.account || "-"}</td>
+                <td style={{ padding: "12px" }}>{pos.quantity ?? 0}</td>
+                <td style={{ padding: "12px" }}>
+                  {pos.price != null
+                    ? Number(pos.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                    : "-"}
+                </td>
+                <td style={{ padding: "12px" }}>
+                  {Number(pos.valorAtualBrl ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </td>
               </tr>
             ))}
             {positions.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ padding: "16px", textAlign: "center" }}>
-                  Nenhuma posição cadastrada.
+                <td colSpan={8} style={{ padding: "16px", textAlign: "center", color: "#94a3b8" }}>
+                  Nenhuma posição cadastrada. Importe uma planilha para começar.
                 </td>
               </tr>
             )}

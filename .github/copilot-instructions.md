@@ -1,5 +1,10 @@
 # ProjInvest — Copilot Instructions
 
+## 🌐 Idioma
+**Sempre responda em Português do Brasil (pt-BR).** Isso se aplica a todas as mensagens de chat, comentários de código, mensagens de commit, documentação, nomes de variáveis descritivas, textos de UI e qualquer outra saída de texto gerada pelo agente.
+
+---
+
 ## Visão Geral do Projeto
 **ProjInvest** é uma aplicação Next.js 14+ (App Router, TypeScript estrito) para gerenciamento e visualização de carteira de investimentos brasileira, com suporte a CSVs importados manualmente. O stack é: Next.js 14, TypeScript, TailwindCSS v3, Recharts, csv-parse, e Neon/PostgreSQL como banco futuro.
 

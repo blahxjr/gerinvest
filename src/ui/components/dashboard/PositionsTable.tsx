@@ -7,6 +7,8 @@ import EditPositionModal from './EditPositionModal';
 
 type Props = {
   positions: Position[];
+  highlightedTicker?: string | null;
+  onHighlightTicker?: (ticker: string | null) => void;
 };
 
 const formatCurrency = (value: number) =>
@@ -14,7 +16,7 @@ const formatCurrency = (value: number) =>
 
 const ITEMS_PER_PAGE = 25;
 
-export default function PositionsTable({ positions }: Props) {
+export default function PositionsTable({ positions, highlightedTicker, onHighlightTicker }: Props) {
   const [editingPosition, setEditingPosition] = useState<Position | null>(null);
   const [filters, setFilters] = useState({
     assetClass: [] as AssetClass[],
@@ -100,16 +102,30 @@ export default function PositionsTable({ positions }: Props) {
               const price = p.price ?? p.precoMedio ?? 0;
               const grossValue = p.grossValue ?? p.valorAtualBruto ?? 0;
               const totalValue = positions.reduce((sum, q) => sum + (q.grossValue ?? q.valorAtualBruto ?? 0), 0);
+              const isHighlighted = highlightedTicker === p.ticker;
               
               return (
-              <tr key={p.id} className="border-b border-white/10 hover:bg-slate-900">
-                <td className="px-3 py-2">{p.ticker || '-'}</td>
+              <tr 
+                key={p.id} 
+                className={`border-b border-white/10 cursor-pointer transition-colors ${
+                  isHighlighted 
+                    ? 'bg-sky-900/60 border-sky-500' 
+                    : 'hover:bg-slate-900'
+                }`}
+                onMouseEnter={() => onHighlightTicker?.(p.ticker || null)}
+                onMouseLeave={() => onHighlightTicker?.(null)}
+              >
+                <td className="px-3 py-2 font-semibold">{p.ticker || '-'}</td>
                 <td className="px-3 py-2">{p.description || p.descricao || '-'}</td>
                 <td className="px-3 py-2">{p.institution || p.instituicao || '-'}</td>
                 <td className="px-3 py-2">{p.account || p.conta || '-'}</td>
                 <td className="px-3 py-2">{p.quantity || p.quantidade || 0}</td>
                 <td className="px-3 py-2">{formatCurrency(price)}</td>
-                <td className="px-3 py-2">{formatCurrency(grossValue)}</td>
+                <td className="px-3 py-2">
+                  <span className={isHighlighted ? 'text-sky-300 font-semibold' : ''}>
+                    {formatCurrency(grossValue)}
+                  </span>
+                </td>
                 <td className="px-3 py-2">{(grossValue / Math.max(1, totalValue) * 100).toFixed(2)}%</td>
                 <td className="px-3 py-2">
                   <button

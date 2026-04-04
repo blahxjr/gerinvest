@@ -3,5 +3,8 @@
   "copilot.chat.experimental.agentMode": true,
   "github.copilot.chat.codeGeneration.model": "gpt-5-2-codex",
   "github.copilot.chat.experimental.agentMode.model": "claude-sonnet-4.6",
-  "editor.inlineSuggest.enabled": true
+  "editor.inlineSuggest.enabled": true,
+  "chat.tools.terminal.autoApprove": {
+    "npx ts-node": true
+  }
 }

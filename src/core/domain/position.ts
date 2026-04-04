@@ -9,7 +9,7 @@ export type Position = {
   descricao?: string;
   instituicao?: string;
   conta?: string;
-  custoria?: string;
+  custodia?: string;
   quantidade?: number;
   precoMedio?: number;
   valorAtualBruto?: number;

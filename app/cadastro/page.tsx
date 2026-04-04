@@ -8,12 +8,16 @@ import { CreateCarteiraInput, CreateAtivoInput, CreatePosicaoInput, Ativo } from
 
 type Tab = 'carteira' | 'ativo' | 'posicao';
 
+type ContentState = {
+  carteiras: Array<{ id: string; nome: string }>;
+  ativos: Ativo[];
+};
+
 export default function CadastroPage() {
   const [tab, setTab] = useState<Tab>('carteira');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [carteiras, setCarteiras] = useState<Array<{ id: string; nome: string }>>([]);
-  const [ativos, setAtivos] = useState<Ativo[]>([]);
+  const [content, setContent] = useState<ContentState>({ carteiras: [], ativos: [] });
   const [isLoading, setIsLoading] = useState(true);
 
   // Carrega carteiras e ativos ao abrir a página
@@ -24,15 +28,13 @@ export default function CadastroPage() {
         fetch('/api/ativos'),
       ]);
 
-      if (carteirasResponse.ok) {
-        const data = await carteirasResponse.json();
-        setCarteiras(Array.isArray(data) ? data : []);
-      }
+      const carteirasData = carteirasResponse.ok ? await carteirasResponse.json() : [];
+      const ativosData = ativosResponse.ok ? await ativosResponse.json() : [];
 
-      if (ativosResponse.ok) {
-        const data = await ativosResponse.json();
-        setAtivos(Array.isArray(data) ? data : []);
-      }
+      setContent({
+        carteiras: Array.isArray(carteirasData) ? carteirasData : [],
+        ativos: Array.isArray(ativosData) ? ativosData : [],
+      });
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       setMessage({ type: 'error', text: 'Erro ao carregar dados iniciais' });
@@ -57,15 +59,16 @@ export default function CadastroPage() {
       });
 
       if (res.ok) {
-        setMessage({ type: 'success', text: 'Carteira criada com sucesso!' });
+        setMessage({ type: 'success', text: '✅ Carteira criada com sucesso!' });
         await loadData();
-        setTab('ativo');
+        // Mover para próximo passo automáticamente
+        setTimeout(() => setTab('ativo'), 1500);
       } else {
         const error = await res.json();
-        setMessage({ type: 'error', text: `Erro: ${error.message || 'Falha ao criar carteira'}` });
+        setMessage({ type: 'error', text: `❌ Erro: ${error.message || 'Falha ao criar carteira'}` });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: `Erro: ${String(error)}` });
+      setMessage({ type: 'error', text: `❌ Erro: ${String(error)}` });
     } finally {
       setLoading(false);
     }
@@ -82,9 +85,10 @@ export default function CadastroPage() {
       });
 
       if (res.ok) {
-        setMessage({ type: 'success', text: 'Ativo criado com sucesso!' });
+        setMessage({ type: 'success', text: '✅ Ativo criado com sucesso!' });
         await loadData();
-        setTab('posicao');
+        // Mover para próximo passo automáticamente
+        setTimeout(() => setTab('posicao'), 1500);
       } else {
         const error = await res.json();
         setMessage({ type: 'error', text: `Erro: ${error.message || 'Falha ao criar ativo'}` });
@@ -107,8 +111,10 @@ export default function CadastroPage() {
       });
 
       if (res.ok) {
-        setMessage({ type: 'success', text: 'Posição criada com sucesso!' });
+        setMessage({ type: 'success', text: '✅ Posição criada com sucesso!' });
         await loadData();
+        // Limpar form após sucesso
+        setTimeout(() => setMessage(null), 2000);
       } else {
         const error = await res.json();
         setMessage({ type: 'error', text: `Erro: ${error.message || 'Falha ao criar posição'}` });
@@ -210,11 +216,11 @@ export default function CadastroPage() {
           {tab === 'posicao' && (
             <div>
               <h2 className="text-xl font-semibold text-white mb-6">Criar Nova Posição</h2>
-              {carteiras.length === 0 ? (
+              {content.carteiras.length === 0 ? (
                 <div className="p-4 rounded-lg bg-amber-500/20 border border-amber-500 text-amber-100">
                   <p>Você precisa criar uma carteira antes de adicionar posições.</p>
                 </div>
-              ) : ativos.length === 0 ? (
+              ) : content.ativos.length === 0 ? (
                 <div className="p-4 rounded-lg bg-amber-500/20 border border-amber-500 text-amber-100">
                   <p>Você precisa criar um ativo antes de adicionar posições.</p>
                 </div>
@@ -222,8 +228,8 @@ export default function CadastroPage() {
                 <PosicaoForm
                   onSubmit={handlePosicaoSubmit}
                   onCancel={() => setTab('ativo')}
-                  carteiras={carteiras}
-                  ativos={ativos}
+                  carteiras={content.carteiras}
+                  ativos={content.ativos}
                   isLoading={loading}
                 />
               )}

@@ -6,12 +6,9 @@ import { usePathname } from "next/navigation";
 type NavItem = { href: string; label: string };
 
 const navItems: NavItem[] = [
-  { href: "/", label: "Dashboard" },
-  { href: "/clientes", label: "Clientes" },
-  { href: "/contas", label: "Contas" },
-  { href: "/ativos", label: "Ativos" },
-  { href: "/posicoes", label: "Posições" },
-  { href: "/importacao", label: "Importação" },
+  { href: "/", label: "📊 Dashboard" },
+  { href: "/cadastro", label: "➕ Cadastro" },
+  { href: "/upload", label: "📤 Importar B3" },
 ];
 
 export default function AppSidebar() {

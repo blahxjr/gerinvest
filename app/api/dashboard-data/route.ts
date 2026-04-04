@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/authGuard';
-import { CsvPortfolioRepository } from '@/infra/repositories/csvPortfolioRepository';
+import { getPortfolioRepository } from '@/infra/repositories/postgresPortfolioRepository';
 import {
   getPortfolioSummary,
   getAllocationByAssetClass,
@@ -17,11 +17,10 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const repo = new CsvPortfolioRepository();
-    const positions = await repo.getAllPositions();
-    const summary = await repo.getSummary();
-    const lastImportDate = await repo.getLastImportDate?.();
+    const repo = getPortfolioRepository();
+    const positions = await repo.getAllPositionsEnriched();
 
+    const summary = getPortfolioSummary(positions);
     const allocationByAssetClass = getAllocationByAssetClass(positions);
     const allocationByInstitution = getAllocationByInstitution(positions);
     const topPositions = getTopPositions(positions, 20);
@@ -29,7 +28,7 @@ export async function GET(req: NextRequest) {
     const fixedVsVariable = getFixedVsVariableRatio(positions);
 
     return NextResponse.json({
-      summary: { ...summary, lastImportDate },
+      summary,
       allocationByAssetClass,
       allocationByInstitution,
       topPositions,
@@ -38,7 +37,10 @@ export async function GET(req: NextRequest) {
       positions,
     });
   } catch (error) {
-    console.error('dashboard-data failed', error);
-    return NextResponse.json({ error: 'Erro ao carregar dados do dashboard', details: (error as Error).message }, { status: 500 });
+    console.error('dashboard-data falhou', error);
+    return NextResponse.json(
+      { error: 'Erro ao carregar dados do dashboard', details: (error as Error).message },
+      { status: 500 }
+    );
   }
 }

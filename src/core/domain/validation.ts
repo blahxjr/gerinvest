@@ -15,7 +15,7 @@ export const positionSchema = z.object({
   descricao: z.string().optional(),
   instituicao: z.string().optional(),
   conta: z.string().optional(),
-  custoria: z.string().optional(),
+  custodia: z.string().optional(),
   quantidade: z.number().nonnegative().optional(),
   precoMedio: z.number().nonnegative().optional(),
   valorAtualBruto: z.number().nonnegative().optional(),
