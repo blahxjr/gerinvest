@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 type NavItem = { href: string; label: string };
 
 const navItems: NavItem[] = [
-  { href: "/", label: "Dashboard" },
+  { href: "/", label: "Painel" },
   { href: "/clientes", label: "Clientes" },
   { href: "/contas", label: "Contas" },
   { href: "/ativos", label: "Ativos" },
@@ -48,7 +48,7 @@ export default function AppSidebar() {
 
       <div className="mt-8 rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-400">
         <p className="text-slate-300 font-semibold">Tema</p>
-        <p>Dark Pro</p>
+        <p>Escuro Pro</p>
       </div>
     </aside>
   );

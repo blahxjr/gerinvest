@@ -2,6 +2,15 @@
 
 import { FormEvent, useState } from 'react';
 
+type UploadStatus = 'idle' | 'uploading' | 'done' | 'error';
+
+const STATUS_LABELS: Record<UploadStatus, string> = {
+  idle: 'Aguardando',
+  uploading: 'Enviando',
+  done: 'Concluído',
+  error: 'Erro',
+};
+
 type UploadResponse = {
   success: boolean;
   totalCount?: number;
@@ -12,7 +21,7 @@ type UploadResponse = {
 
 export default function UploadForm() {
   const [file, setFile] = useState<File | null>(null);
-  const [status, setStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
+  const [status, setStatus] = useState<UploadStatus>('idle');
   const [message, setMessage] = useState<string>('');
   const [result, setResult] = useState<UploadResponse | null>(null);
   const [editableJson, setEditableJson] = useState<string>('');
@@ -149,7 +158,7 @@ export default function UploadForm() {
       </div>
 
       <div className="mt-4 rounded-xl border border-white/10 bg-slate-800 p-4">
-        <p className="text-sm text-slate-200">Status: {status}</p>
+        <p className="text-sm text-slate-200">Situação: {STATUS_LABELS[status]}</p>
         <p className="text-sm text-slate-200">{message}</p>
 
         {status === 'done' && result && (
