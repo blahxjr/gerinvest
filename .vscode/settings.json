@@ -1,0 +1,7 @@
+{
+  "github.copilot.chat.codeGeneration.model": "gpt-5",
+  "github.copilot.chat.experimental.enableAgentMode": true,
+  "github.copilot.chat.experimental.agentMode.model": "claude-sonnet-4.6",
+  "editor.inlineSuggest.enabled": true,
+  "copilot.chat.experimental.agentMode": true
+}
