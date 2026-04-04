@@ -198,7 +198,7 @@ function calculateCryptoCustodyDistribution(
 
   cryptos.forEach((crypto) => {
     const value = crypto.valorAtualBrl || crypto.grossValue || 0;
-    const custody = (crypto.custoria || crypto.issuer || '').toLowerCase();
+    const custody = (crypto.custodia || crypto.issuer || '').toLowerCase();
 
     if (custody.includes('exchange') || custody.includes('binance') || custody.includes('kraken') || custody.includes('coinbase')) {
       exchange += value;

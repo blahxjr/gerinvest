@@ -139,21 +139,21 @@ export default function DashboardWithCarteiras({ carteiras, allPositions }: Prop
             <div className="rounded-lg bg-slate-700/50 border border-slate-600 p-3">
               <p className="text-xs text-slate-400 mb-1">⚖️ Renda Fixa vs Variável</p>
               <p className="text-sm text-slate-100">
-                <strong className="text-orange-400">{fixedVsVariable.percentualFixa.toFixed(1)}%</strong> Renda Fixa{' '}
-                <span className="text-slate-500">•</span> <strong className="text-red-400">{fixedVsVariable.percentualVariavel.toFixed(1)}%</strong> Renda Variável
+                <strong className="text-orange-400">{fixedVsVariable.fixedPercentage.toFixed(1)}%</strong> Renda Fixa{' '}
+                <span className="text-slate-500">•</span> <strong className="text-red-400">{fixedVsVariable.variablePercentage.toFixed(1)}%</strong> Renda Variável
               </p>
             </div>
 
             {/* Insight 5: Concentração */}
-            {concentration && concentration.largestPosition && (
+            {concentration && concentration.largestPositionPercentage > 0 && (
               <div className="rounded-lg bg-slate-700/50 border border-slate-600 p-3">
                 <p className="text-xs text-slate-400 mb-1">📊 Maior Posição</p>
                 <p className="text-sm text-slate-100">
-                  <strong>{concentration.largestPosition.ticker}</strong> com{' '}
-                  <strong className={concentration.largestPosition.percentualDaCarteira > 20 ? 'text-red-400' : 'text-green-400'}>
-                    {concentration.largestPosition.percentualDaCarteira.toFixed(2)}%
+                  Maior posição representa{' '}
+                  <strong className={concentration.largestPositionPercentage > 20 ? 'text-red-400' : 'text-green-400'}>
+                    {concentration.largestPositionPercentage.toFixed(2)}%
                   </strong>{' '}
-                  {concentration.largestPosition.percentualDaCarteira > 20 && '⚠️ Concentrado'}
+                  da carteira{concentration.largestPositionPercentage > 20 && ' ⚠️ Concentrado'}
                 </p>
               </div>
             )}

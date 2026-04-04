@@ -34,7 +34,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   try {
     const repo = getPortfolioRepository();
-    const updated = await repo.updatePosicao(id, parsed.data);
+    const updated = await repo.updatePosicao(id, {
+      ...parsed.data,
+      dataEntrada: parsed.data.dataEntrada ? new Date(parsed.data.dataEntrada) : undefined,
+      dataVencimento: parsed.data.dataVencimento ? new Date(parsed.data.dataVencimento) : undefined,
+    });
     if (!updated) {
       return NextResponse.json({ error: 'Posição não encontrada' }, { status: 404 });
     }

@@ -16,7 +16,7 @@ const formatCurrency = (value: number) =>
 
 const ITEMS_PER_PAGE = 25;
 
-export default function PositionsTable({ positions }: Props) {
+export default function PositionsTable({ positions, highlightedTicker, onHighlightTicker }: Props) {
   const [editingPosition, setEditingPosition] = useState<Position | null>(null);
   const [filters, setFilters] = useState({
     assetClass: [] as AssetClass[],

@@ -58,7 +58,11 @@ export async function POST(req: NextRequest) {
     }
 
     const repo = getPortfolioRepository();
-    const posicao = await repo.createPosicao(parsed.data);
+    const posicao = await repo.createPosicao({
+      ...parsed.data,
+      dataEntrada: parsed.data.dataEntrada ? new Date(parsed.data.dataEntrada) : undefined,
+      dataVencimento: parsed.data.dataVencimento ? new Date(parsed.data.dataVencimento) : undefined,
+    });
     return NextResponse.json(posicao, { status: 201 });
   } catch (error) {
     console.error('POST /api/posicoes error:', error);

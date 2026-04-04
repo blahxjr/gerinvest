@@ -6,7 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getPortfolioRepository } from '@/infra/repositories/postgresPortfolioRepository';
-import { ClasseAtivo } from '@/core/domain/types';
+import { ClasseAtivo, SubclasseAtivo } from '@/core/domain/types';
+import { CreateAtivoInput } from '@/core/domain/entities';
 
 const CLASSE_ATIVO_VALUES = [
   'ACAO_BR', 'FII', 'ETF_BR', 'BDR', 'ACAO_EUA', 'ETF_EUA',
@@ -16,7 +17,7 @@ const CLASSE_ATIVO_VALUES = [
 const createAtivoSchema = z.object({
   ticker: z.string().max(20).optional(),
   nome: z.string().min(1, 'Nome é obrigatório').max(200),
-  classe: z.enum(CLASSE_ATIVO_VALUES, { errorMap: () => ({ message: 'Classe de ativo inválida' }) }),
+  classe: z.enum(CLASSE_ATIVO_VALUES, { message: 'Classe de ativo inválida' }),
   subclasse: z.string().max(50).optional(),
   pais: z.string().max(3).optional(),
   moeda: z.enum(['BRL', 'USD', 'EUR']).default('BRL'),
@@ -24,7 +25,7 @@ const createAtivoSchema = z.object({
   segmento: z.string().max(100).optional(),
   benchmark: z.string().max(50).optional(),
   indexador: z.string().max(50).optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -63,7 +64,11 @@ export async function POST(req: NextRequest) {
     }
 
     const repo = getPortfolioRepository();
-    const ativo = await repo.createAtivo(parsed.data);
+    const input: CreateAtivoInput = {
+      ...parsed.data,
+      subclasse: parsed.data.subclasse as SubclasseAtivo | undefined,
+    };
+    const ativo = await repo.createAtivo(input);
     return NextResponse.json(ativo, { status: 201 });
   } catch (error) {
     console.error('POST /api/ativos error:', error);
