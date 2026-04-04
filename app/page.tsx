@@ -10,8 +10,10 @@ import {
   getTopPositions,
   getConcentrationMetrics,
   getFixedVsVariableRatio,
+  getMarkToMarketMetrics,
 } from '@/core/services/portfolioService';
 import { unstable_cache } from 'next/cache';
+import { getCotacoes } from '@/infra/services/brapiService';
 
 const getCachedPositions = unstable_cache(
   async () => {
@@ -46,16 +48,31 @@ const getCachedLastImportDate = unstable_cache(
   { revalidate: 60 }
 );
 
+const getCachedQuotes = unstable_cache(
+  async (tickersCsv: string) => {
+    const tickers = tickersCsv.split(',').map((value) => value.trim()).filter(Boolean);
+    return getCotacoes(tickers);
+  },
+  ['portfolio-live-quotes'],
+  { revalidate: 300 },
+);
+
 export default async function Home() {
   const positions = await getCachedPositions();
   const summary = await getCachedSummary();
   const lastImportDate = await getCachedLastImportDate();
+
+  const tradableTickers = Array.from(
+    new Set((positions ?? []).map((position) => (position.ticker ?? '').trim().toUpperCase()).filter(Boolean)),
+  );
+  const quotesByTicker = await getCachedQuotes(tradableTickers.join(','));
 
   const allocationByAssetClass = getAllocationByAssetClass(positions || []);
   const allocationByInstitution = getAllocationByInstitution(positions);
   const topPositions = getTopPositions(positions, 20);
   const concentration = getConcentrationMetrics(positions);
   const fixedVsVariable = getFixedVsVariableRatio(positions);
+  const markToMarket = getMarkToMarketMetrics(positions, quotesByTicker);
 
   const sortedAssetClass = [...allocationByAssetClass].sort((a, b) => b.percentage - a.percentage);
   const topAssetClass = sortedAssetClass[0];
@@ -68,12 +85,13 @@ export default async function Home() {
     topPositions,
     concentration,
     fixedVsVariable,
+    markToMarket,
     positions,
   };
 
   return (
     <DashboardClient>
-      <PortfolioOverview summary={data.summary} positions={data.positions} />
+      <PortfolioOverview summary={data.summary} positions={data.positions} markToMarket={data.markToMarket} />
 
       <AllocationCharts assetClass={data.allocationByAssetClass} institution={data.allocationByInstitution} />
 

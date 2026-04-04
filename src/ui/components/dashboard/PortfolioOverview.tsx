@@ -1,10 +1,11 @@
 import { PortfolioSummary } from '@/core/domain/portfolio';
 import { Position } from '@/core/domain/position';
-import { ASSET_CLASS_LABELS } from '@/core/domain/types';
+import type { MarkToMarketMetrics } from '@/core/services/portfolioService';
 
 type Props = { 
   summary: PortfolioSummary & { lastImportDate?: string };
   positions: Position[];
+  markToMarket?: MarkToMarketMetrics;
 };
 
 const formatCurrency = (value: number) =>
@@ -13,12 +14,15 @@ const formatCurrency = (value: number) =>
 const formatPercent = (value: number, decimals = 2) =>
   `${value.toFixed(decimals)}%`;
 
-export default function PortfolioOverview({ summary, positions }: Props) {
-  const getValue = (p: any) => p.valorAtualBrl ?? p.grossValue ?? 0;
+export default function PortfolioOverview({ summary, positions, markToMarket }: Props) {
+  const getValue = (p: Position): number => p.valorAtualBrl ?? p.grossValue ?? 0;
   const totalValue = positions.reduce((sum, p) => sum + getValue(p), 0);
   const topPosition = positions.reduce((top, p) => getValue(p) > getValue(top) ? p : top, positions[0]);
   const diversification = new Set(positions.map(p => p.assetClass || p.classe)).size;
   const concentrationAlert = topPosition && (getValue(topPosition) / totalValue) > 0.2;
+  const coverage = markToMarket && markToMarket.totalPositions > 0
+    ? (markToMarket.coveredPositions / markToMarket.totalPositions) * 100
+    : 0;
 
   const lastImportFormatted = summary.lastImportDate 
     ? new Date(summary.lastImportDate).toLocaleString('pt-BR', { 
@@ -53,6 +57,18 @@ export default function PortfolioOverview({ summary, positions }: Props) {
         <div className="rounded-xl border border-white/10 bg-slate-800 p-4 shadow-lg">
           <p className="text-sm text-slate-400">Última Importação</p>
           <p className="text-lg font-bold text-white">{lastImportFormatted}</p>
+        </div>
+        <div className="rounded-xl border border-sky-500/40 bg-slate-800 p-4 shadow-lg">
+          <p className="text-sm text-slate-400">Marcação a Mercado (BRAPI)</p>
+          <p className="text-lg font-bold text-white">{formatCurrency(markToMarket?.liveTotalValue ?? 0)}</p>
+          <p className="text-xs text-slate-400 mt-1">Cobertura: {formatPercent(coverage)}</p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-slate-800 p-4 shadow-lg">
+          <p className="text-sm text-slate-400">P/L Não Realizado</p>
+          <p className={`text-lg font-bold ${(markToMarket?.pnlValue ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {formatCurrency(markToMarket?.pnlValue ?? 0)}
+          </p>
+          <p className="text-xs text-slate-400 mt-1">{formatPercent(markToMarket?.pnlPercentage ?? 0)}</p>
         </div>
         {concentrationAlert && (
           <div className="rounded-xl border border-red-500 bg-red-900/20 p-4 shadow-lg col-span-full">

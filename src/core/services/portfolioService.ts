@@ -2,6 +2,17 @@ import { Position } from '../domain/position';
 import { AllocationEntry, ConcentrationMetrics, PortfolioSummary } from '../domain/portfolio';
 import { ClasseAtivo } from '../domain/types';
 
+type QuoteInput = { price: number; change?: number };
+
+export type MarkToMarketMetrics = {
+  liveTotalValue: number;
+  costBasisValue: number;
+  pnlValue: number;
+  pnlPercentage: number;
+  coveredPositions: number;
+  totalPositions: number;
+};
+
 // Helper function to get safe grossValue
 const getGrossValue = (position: Position): number => {
   return position.valorAtualBruto ?? position.grossValue ?? 0;
@@ -111,5 +122,41 @@ export function getFixedVsVariableRatio(positions: Position[]): { fixed: number;
     variable,
     fixedPercentage: total === 0 ? 0 : (fixed / total) * 100,
     variablePercentage: total === 0 ? 0 : (variable / total) * 100,
+  };
+}
+
+export function getMarkToMarketMetrics(
+  positions: Position[],
+  quotesByTicker: Record<string, QuoteInput>,
+): MarkToMarketMetrics {
+  let liveTotalValue = 0;
+  let costBasisValue = 0;
+  let coveredPositions = 0;
+
+  for (const position of positions) {
+    const ticker = (position.ticker ?? '').trim().toUpperCase();
+    const quantity = position.quantidade ?? position.quantity ?? 0;
+    const averagePrice = position.precoMedio ?? position.price ?? 0;
+
+    if (!ticker || quantity <= 0) continue;
+
+    const quote = quotesByTicker[ticker];
+    if (!quote || quote.price <= 0) continue;
+
+    coveredPositions += 1;
+    liveTotalValue += quote.price * quantity;
+    costBasisValue += averagePrice * quantity;
+  }
+
+  const pnlValue = liveTotalValue - costBasisValue;
+  const pnlPercentage = costBasisValue === 0 ? 0 : (pnlValue / costBasisValue) * 100;
+
+  return {
+    liveTotalValue,
+    costBasisValue,
+    pnlValue,
+    pnlPercentage,
+    coveredPositions,
+    totalPositions: positions.length,
   };
 }
