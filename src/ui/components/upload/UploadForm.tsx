@@ -1,12 +1,15 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import ImportPreviewTable, { type PreviewPosition } from './ImportPreviewTable';
 
 type UploadResponse = {
   success: boolean;
   preview?: boolean;
   totalCount?: number;
   totalValue?: number;
+  positions?: PreviewPosition[];
   perAssetClass?: Array<{ classe: string; importedCount: number; importedValue: number; errors: { row: number; message: string; }[]}>;
   previewRows?: Array<{
     id: string;
@@ -28,15 +31,17 @@ type UploadResponse = {
 };
 
 export default function UploadForm() {
+  const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
-  const [status, setStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'uploading' | 'done' | 'error' | 'preview' | 'confirming'>('idle');
   const [message, setMessage] = useState<string>('');
   const [result, setResult] = useState<UploadResponse | null>(null);
   const [editableJson, setEditableJson] = useState<string>('');
   const [sheetUrl, setSheetUrl] = useState<string>('');
   const [excelPreviewReady, setExcelPreviewReady] = useState(false);
+  const [sheetPreviewPositions, setSheetPreviewPositions] = useState<PreviewPosition[] | null>(null);
 
-  async function callUploadApi(endpoint: string, body: FormData | { spreadsheetUrl: string }) {
+  async function callUploadApi(endpoint: string, body: FormData | Record<string, unknown>) {
     let response;
 
     if (body instanceof FormData) {
@@ -149,10 +154,13 @@ export default function UploadForm() {
     }
 
     setStatus('uploading');
-    setMessage('Importando do Google Sheets...');
+    setMessage('Lendo planilha do Google Sheets...');
 
     try {
-      const data = await callUploadApi('/api/upload-positions/google-sheet', { spreadsheetUrl: sheetUrl.trim() });
+      const data = await callUploadApi('/api/upload-positions/google-sheet', {
+        spreadsheetUrl: sheetUrl.trim(),
+        previewOnly: true,
+      });
 
       if (!data.success) {
         setStatus('error');
@@ -161,19 +169,84 @@ export default function UploadForm() {
         return;
       }
 
-      setResult(data);
-      setEditableJson(JSON.stringify(data, null, 2));
-      setStatus('done');
-      setMessage(`Importação do Google Sheets concluída: ${data.totalCount} posições carregadas.`);
+      if (data.positions && data.positions.length > 0) {
+        setSheetPreviewPositions(data.positions as PreviewPosition[]);
+        setResult(data);
+        setStatus('preview');
+        setMessage(`${data.positions.length} posições encontradas. Confira, edite ou exclua antes de confirmar.`);
+      } else {
+        setStatus('error');
+        setMessage('Nenhuma posição encontrada na planilha.');
+      }
     } catch (error) {
       setStatus('error');
       setMessage('Falha ao importar do Google Sheets.');
     }
   }
 
+  async function handleSheetConfirm(positions: PreviewPosition[]) {
+    setStatus('confirming');
+    setMessage('Salvando posições no banco de dados...');
+
+    try {
+      const response = await fetch('/api/upload-positions/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ positions }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setStatus('error');
+        setMessage(data.error || 'Erro ao confirmar importação.');
+        return;
+      }
+
+      setSheetPreviewPositions(null);
+      setStatus('done');
+      setMessage(
+        `Importação concluída: ${data.persisted?.inserted ?? 0} inseridas, ${data.persisted?.updated ?? 0} atualizadas, ${data.persisted?.skipped ?? 0} ignoradas.`
+      );
+      router.refresh();
+    } catch {
+      setStatus('error');
+      setMessage('Falha ao confirmar importação.');
+    }
+  }
+
+  function handleSheetPreviewCancel() {
+    setSheetPreviewPositions(null);
+    setStatus('idle');
+    setMessage('');
+  }
+
   return (
-    <section className="max-w-3xl mx-auto p-4">
+    <section className="max-w-6xl mx-auto p-4">
       <h1 className="text-3xl font-bold text-sky-400 mb-4">Importar posição de investimentos</h1>
+
+      {/* Tela de conferência Google Sheets */}
+      {sheetPreviewPositions && (status === 'preview' || status === 'confirming') && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-emerald-300">Conferência — Google Sheets</h2>
+            <span className="rounded-full bg-emerald-900/50 px-3 py-1 text-xs text-emerald-300">
+              {sheetPreviewPositions.length} posições encontradas
+            </span>
+          </div>
+          <p className="text-sm text-slate-300">{message}</p>
+          <ImportPreviewTable
+            positions={sheetPreviewPositions}
+            onConfirm={handleSheetConfirm}
+            onCancel={handleSheetPreviewCancel}
+            confirming={status === 'confirming'}
+          />
+        </div>
+      )}
+
+      {/* Formulários normais (ocultos durante preview) */}
+      {!sheetPreviewPositions && (
+        <>
       <div className="space-y-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           <h2 className="text-lg font-semibold text-sky-300">Upload de arquivo Excel</h2>
@@ -216,13 +289,13 @@ export default function UploadForm() {
             disabled={!sheetUrl.trim() || status === 'uploading'}
             className="rounded bg-emerald-500 px-4 py-2 font-semibold text-white hover:bg-emerald-400 disabled:opacity-50"
           >
-            {status === 'uploading' ? 'Processando...' : 'Importar do Google Sheets'}
+            {status === 'uploading' ? 'Carregando planilha...' : 'Carregar e conferir posições'}
           </button>
         </form>
       </div>
 
       <div className="mt-4 rounded-xl border border-white/10 bg-slate-800 p-4">
-        <p className="text-sm text-slate-200">Status: {status}</p>
+        <p className="text-sm text-slate-200">Status: {status === 'preview' ? 'conferência' : status}</p>
         <p className="text-sm text-slate-200">{message}</p>
 
         {status === 'done' && result && (
@@ -306,6 +379,8 @@ export default function UploadForm() {
           <p className="mt-3 text-red-400">Erro: {result.error}</p>
         )}
       </div>
+        </>
+      )}
     </section>
   );
 }

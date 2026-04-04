@@ -381,7 +381,6 @@ export class PostgresPortfolioRepository {
                 valor_atual_bruto as "valorAtualBruto", valor_atual_brl as "valorAtualBrl", moeda_original as "moedaOriginal",
                 instituicao, conta, custodia, data_entrada as "dataEntrada", data_vencimento as "dataVencimento",
                 atualizado_em as "atualizadoEm"
-      WHERE id = $1
     `;
     const result = await this.pool.query(query, values);
     return result.rows[0];
@@ -528,6 +527,48 @@ export class PostgresPortfolioRepository {
       ...row,
       metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
     };
+  }
+
+  async updatePosition(id: string, updates: Partial<Position>): Promise<Position> {
+    const fieldMapping: Record<string, string> = {
+      quantidade: 'quantidade',
+      quantity: 'quantidade',
+      precoMedio: 'precoMedio',
+      price: 'precoMedio',
+      valorAtualBruto: 'valorAtualBruto',
+      grossValue: 'valorAtualBruto',
+      valorAtualBrl: 'valorAtualBrl',
+      moedaOriginal: 'moedaOriginal',
+      currency: 'moedaOriginal',
+      instituicao: 'instituicao',
+      institution: 'instituicao',
+      conta: 'conta',
+      account: 'conta',
+      dataEntrada: 'dataEntrada',
+      dataVencimento: 'dataVencimento',
+      maturityDate: 'dataVencimento',
+    };
+
+    const mapped: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      const target = fieldMapping[key];
+      if (target && value !== undefined) {
+        mapped[target] = value;
+      }
+    }
+
+    if (Object.keys(mapped).length > 0) {
+      await this.updatePosicao(id, mapped as Partial<CreatePosicaoInput>);
+    }
+
+    const positions = await this.getAllPositions();
+    const updated = positions.find((p) => p.id === id);
+    if (!updated) throw new Error(`Posição não encontrada: ${id}`);
+    return updated;
+  }
+
+  async deletePosition(id: string): Promise<void> {
+    return this.deletePosicao(id);
   }
 
   async close(): Promise<void> {

@@ -6,7 +6,7 @@ import {
   analyzeFixedIncome,
   analyzeFunds,
 } from '@/core/services';
-import { CsvPortfolioRepository } from '@/infra/repositories/csvPortfolioRepository';
+import { getPortfolioRepository } from '@/infra/repositories/postgresPortfolioRepository';
 
 type AnalysisType = 'diversification' | 'fiis' | 'crypto' | 'fixedIncome' | 'funds' | 'all';
 
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     const { analysisType } = (await req.json()) as { analysisType?: AnalysisType };
     const queryType = analysisType || 'all';
 
-    const repo = new CsvPortfolioRepository();
+    const repo = getPortfolioRepository();
     const positions = await repo.getAllPositions();
 
     if (positions.length === 0) {

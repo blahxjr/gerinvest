@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CsvPortfolioRepository } from '@/infra/repositories/csvPortfolioRepository';
+import { getPortfolioRepository } from '@/infra/repositories/postgresPortfolioRepository';
 import { requireAuth } from '@/lib/authGuard';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -10,7 +10,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await req.json();
-  const repo = new CsvPortfolioRepository();
+  const repo = getPortfolioRepository();
   
   try {
     const updated = await repo.updatePosition(id, body);
@@ -27,7 +27,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   }
 
   const { id } = await params;
-  const repo = new CsvPortfolioRepository();
+  const repo = getPortfolioRepository();
   await repo.deletePosition(id);
   return NextResponse.json({ ok: true });
 }

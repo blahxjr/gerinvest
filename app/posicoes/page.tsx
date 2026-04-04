@@ -1,7 +1,7 @@
-import { CsvPortfolioRepository } from "@/infra/repositories/csvPortfolioRepository";
+import { getPortfolioRepository } from '@/infra/repositories/postgresPortfolioRepository';
 
 export default async function PosicoesPage() {
-  const repo = new CsvPortfolioRepository();
+  const repo = getPortfolioRepository();
   const positions = await repo.getAllPositions();
 
   return (
