@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react';
 import { Position } from '@/core/domain/position';
 import { AssetClass } from '@/core/domain/types';
 import EditPositionModal from './EditPositionModal';
+import { EmptyState } from '@/ui/components/EmptyState';
+import { Table } from 'lucide-react';
 
 type Props = {
   positions: Position[];
@@ -44,7 +46,14 @@ export default function PositionsTable({ positions }: Props) {
   const uniqueInstitutions = [...new Set(positions.map(p => p.institution || p.instituicao || 'Outros'))];
 
   if (positions.length === 0) {
-    return <p className="text-slate-300">Nenhuma posição encontrada. Faça o upload da planilha primeiro.</p>;
+    return (
+      <EmptyState
+        icon={Table}
+        title="Nenhuma posição encontrada"
+        description="Faça a importação da carteira para habilitar análises e gráficos."
+        action={{ label: 'Ir para importação', onClick: () => { window.location.href = '/upload'; } }}
+      />
+    );
   }
 
   return (
@@ -110,7 +119,15 @@ export default function PositionsTable({ positions }: Props) {
                 <td className="px-3 py-2">{p.quantity || p.quantidade || 0}</td>
                 <td className="px-3 py-2">{formatCurrency(price)}</td>
                 <td className="px-3 py-2">{formatCurrency(grossValue)}</td>
-                <td className="px-3 py-2">{(grossValue / Math.max(1, totalValue) * 100).toFixed(2)}%</td>
+                <td className="px-3 py-2 min-w-[120px]">
+                  <div className="text-xs text-slate-300 mb-1">{(grossValue / Math.max(1, totalValue) * 100).toFixed(2)}%</div>
+                  <div className="h-1.5 w-full rounded-full bg-slate-700/70 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-sky-500 to-teal-500"
+                      style={{ width: `${Math.min((grossValue / Math.max(1, totalValue) * 100), 100)}%` }}
+                    />
+                  </div>
+                </td>
                 <td className="px-3 py-2">
                   <button
                     onClick={() => setEditingPosition(p)}

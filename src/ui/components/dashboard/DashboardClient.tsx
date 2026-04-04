@@ -14,14 +14,14 @@ export default function DashboardClient({ children }: DashboardClientProps) {
     <>
       <main className="min-h-screen bg-slate-950 text-slate-100 p-6">
         <section className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
+          <div className="glass rounded-xl px-4 py-3 flex items-center justify-between mb-6">
             <div className="flex flex-col gap-1">
-              <h1 className="text-3xl font-bold text-sky-400">Dashboard da Carteira</h1>
+              <h1 className="text-3xl font-bold text-sky-300">Dashboard da Carteira</h1>
               <p className="text-slate-300">Resumo de posições e alocação a partir de CSVs importados.</p>
             </div>
             <button
               onClick={() => setAnalysisOpen(true)}
-              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium transition"
+              className="px-4 py-2 rounded-lg bg-teal-500/90 hover:bg-teal-500 text-slate-900 font-semibold transition"
               aria-label="Abrir análises da carteira"
             >
               📊 Analisar

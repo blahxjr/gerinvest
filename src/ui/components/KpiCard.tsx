@@ -18,6 +18,36 @@ interface KpiCardProps {
   className?: string;
   animate?: boolean;
   numericValue?: number;
+  sparkline?: number[];
+}
+
+function Sparkline({ values }: { values: number[] }) {
+  if (values.length < 2) return null;
+
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const range = max - min || 1;
+
+  const points = values
+    .map((v, i) => {
+      const x = (i / (values.length - 1)) * 100;
+      const y = 100 - ((v - min) / range) * 100;
+      return `${x},${y}`;
+    })
+    .join(' ');
+
+  return (
+    <svg viewBox="0 0 100 100" className="mt-2 h-8 w-full opacity-80" aria-hidden="true">
+      <polyline
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="4"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        points={points}
+      />
+    </svg>
+  );
 }
 
 function AnimatedNumber({ value, className }: { value: number; className?: string }) {
@@ -56,6 +86,7 @@ export function KpiCard({
   className,
   animate = false,
   numericValue,
+  sparkline,
 }: KpiCardProps) {
   const trendColor: Record<Trend, string> = {
     up: 'text-emerald-400',
@@ -72,10 +103,10 @@ export function KpiCard({
   return (
     <Card
       className={cn(
-        'relative overflow-hidden border transition-all duration-200',
+        'relative overflow-hidden border transition-all duration-200 hover:scale-[1.02] hover:shadow-xl',
         alert
           ? 'border-orange-500/60 bg-orange-950/20'
-          : 'border-white/10 bg-slate-800/80',
+          : 'border-white/15 glass',
         className,
       )}
     >
@@ -111,6 +142,12 @@ export function KpiCard({
             {(trendLabel ?? subtitle) && (
               <p className="text-xs text-slate-400 truncate">{trendLabel ?? subtitle}</p>
             )}
+          </div>
+        )}
+
+        {sparkline && sparkline.length > 1 && (
+          <div className={cn('text-sky-300', trend === 'down' && 'text-rose-400', trend === 'up' && 'text-emerald-400')}>
+            <Sparkline values={sparkline} />
           </div>
         )}
 

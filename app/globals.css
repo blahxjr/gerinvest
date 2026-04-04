@@ -1,11 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --primary: #0EA5E9;
-  --primary-alt: #38BDF8;
-  --accent: #10B981;
-  --danger: #EF4444;
-  --warning: #FBBF24;
+  --primary: #0284c7;
+  --primary-alt: #0ea5e9;
+  --accent: #14b8a6;
+  --success: #84cc16;
+  --danger: #dc2626;
+  --warning: #f59e0b;
   --surface: #020617;
   --surface-2: #0B1220;
   --surface-3: #18243B;
@@ -14,6 +15,16 @@
   --text-muted: #94A3B8;
   --border: #334155;
   --shadow: 0 20px 80px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="light"] {
+  --surface: #f8fafc;
+  --surface-2: #eef2ff;
+  --surface-3: #e2e8f0;
+  --surface-4: #cbd5e1;
+  --text: #0f172a;
+  --text-muted: #334155;
+  --border: #94a3b8;
 }
 
 @theme inline {
@@ -73,6 +84,13 @@ a {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   padding: 1.5rem;
+}
+
+.glass {
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(148, 163, 184, 0.25);
 }
 
 .panel {
