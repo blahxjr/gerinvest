@@ -55,7 +55,6 @@ export default function PortfolioOverview({ summary, positions, markToMarket }: 
           icon={Wallet}
           trend={rentMes >= 0 ? 'up' : 'down'}
           trendLabel={`${rentMes >= 0 ? '+' : ''}${formatPercent(rentMes)}`}
-          sparkline={[95, 100, 105, 101, 108, 112]}
         />
         <KpiCard
           label="Rentabilidade Mês"
@@ -63,7 +62,6 @@ export default function PortfolioOverview({ summary, positions, markToMarket }: 
           subtitle="vs CDI +0.90%"
           icon={TrendingUp}
           trend={rentMes >= 0 ? 'up' : 'down'}
-          sparkline={[0.5, 1.2, 0.9, 1.4, 1.6, rentMes]}
         />
         <KpiCard
           label="Nº Posições"
@@ -71,7 +69,6 @@ export default function PortfolioOverview({ summary, positions, markToMarket }: 
           subtitle={`${summary.uniqueTickers} ativos únicos`}
           icon={PieChart}
           trend="neutral"
-          sparkline={[20, 23, 28, 31, 37, summary.totalPositions]}
         />
         <KpiCard
           label="Concentração Máx"
@@ -80,7 +77,6 @@ export default function PortfolioOverview({ summary, positions, markToMarket }: 
           icon={BarChart3}
           trend={concentrationPct > 20 ? 'down' : 'neutral'}
           alert={concentrationPct > 20}
-          sparkline={[18, 16, 14, 12, 13, concentrationPct]}
         />
         <KpiCard
           label="Proventos Pendentes"
@@ -88,7 +84,6 @@ export default function PortfolioOverview({ summary, positions, markToMarket }: 
           subtitle="estimativa do ciclo atual"
           icon={Coins}
           trend="up"
-          sparkline={[700, 840, 920, 1010, 1130, proventosPendentes]}
         />
         <KpiCard
           label="IR Devido"
@@ -97,7 +92,6 @@ export default function PortfolioOverview({ summary, positions, markToMarket }: 
           icon={CircleDollarSign}
           trend={irDevido > 0 ? 'down' : 'neutral'}
           alert={irDevido > 0}
-          sparkline={[0, 120, 180, 220, 260, irDevido]}
         />
         <KpiCard
           label="Liquidez D+0"
@@ -105,7 +99,6 @@ export default function PortfolioOverview({ summary, positions, markToMarket }: 
           subtitle={`Cobertura BRAPI: ${formatPercent(coverage)}`}
           icon={Landmark}
           trend="neutral"
-          sparkline={[180000, 210000, 260000, 300000, 360000, liquidezD0]}
         />
       </div>
 

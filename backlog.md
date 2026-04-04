@@ -1,36 +1,95 @@
 # PROJINVEST — Backlog de Desenvolvimento
 
-> Atualizado em: 2026-03-31
-> MVP atual: dashboard, listagens, importação B3 CSV, PostgreSQL local
+> Atualizado em: 2026-04-04
+> Estágio atual: P5 concluído — UI Premium + lint zerado + fixes críticos de segurança e integração
+
+---
+
+## ⚠️ INSTRUÇÃO DE ATUALIZAÇÃO CONTÍNUA
+
+**OBRIGATÓRIO: este arquivo deve ser atualizado a cada entrega.**
+
+- Ao concluir qualquer tarefa → marcar `[✅]` + data de conclusão
+- Ao iniciar qualquer tarefa → marcar `[🔄]`
+- Ao cancelar → marcar `[❌]` + motivo
+- Ao identificar nova dívida técnica → adicionar em "Dívida Técnica Atual"
+- O cabeçalho "Atualizado em" deve refletir a data real da última edição
+
+**Quando o Copilot conclui um bloco de tarefas, deve rodar:**
+```
+# Atualizar backlog.md com status pós-entrega
+```
 
 ---
 
 ## Legenda
 - `[ ]` Pendente
 - `[🔄]` Em progresso
-- `[✅]` Concluído
+- `[✅]` Concluído — dd/MM/yyyy
 - `[❌]` Cancelado
+
+---
+
+## FASES JÁ ENTREGUES
+
+| Fase | Descrição | Commit | Data |
+|------|-----------|--------|------|
+| P1 | Limpeza de credenciais, migração `xlsx → exceljs` | `0c281c6` | 2026-03-31 |
+| P2 | Design system shadcn/ui, KpiCard, DataTable (TanStack), Recharts | `d0fa18f` | 2026-04-01 |
+| P3 | Módulo Proventos + IR (migration 006, services, CRUD API, página) | `7a060b4` | 2026-04-02 |
+| P4 | Cotações ao vivo BRAPI + marcação a mercado no dashboard | `383a735` | 2026-04-03 |
+| P5 | UI glassmorphism premium, sidebar mobile, tema dark/light | `45e6e81` | 2026-04-03 |
+| P5.1 | Hardening lint: modais, skeleton, useTransition | `d7a1ddf` | 2026-04-03 |
+| P5.2 | Lint legado zerado (0 erros, 18 warnings estruturais) | `81a699b` | 2026-04-04 |
+| P5.3 | Fixes críticos: route positions/[id], headers segurança, Google Sheets → Postgres | TBD | 2026-04-04 |
+
+---
+
+## DÍVIDA TÉCNICA ATUAL (04/04/2026)
+
+### 🔴 Bloqueante para produção
+- [ ] **DT-001** Rate limiting nas rotas `/api/auth/*` (brute-force)
+- [ ] **DT-002** Configurar provedor SMTP para `/esqueci-senha` (Resend / SendGrid)
+  - API route criada, token gerado — falta envio de e-mail
+  - Requer: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` no `.env.local`
+
+### 🟡 Funcional mas incompleto
+- [ ] **DT-003** Sparklines nos KPIs sem dados históricos reais
+  - Removidas em P5.3 — retornam quando `historico_patrimonio` table existir
+- [ ] **DT-004** Clientes e Contas ainda em CSV (não migrados para Postgres)
+- [ ] **DT-005** `proventosPendentes` e `irDevido` estimados por heurística (0.18%/15% do total)
+  - Devem vir de query real na tabela `proventos`
+- [ ] **DT-006** `rentabilidadeMes` usa P/L MTM como proxy — não é rentabilidade real do período
+
+### 🟢 Baixa prioridade
+- [ ] **DT-007** `QueryResult` import não usado em `postgresPortfolioRepository.ts` (warning lint)
+- [ ] **DT-008** `tmp_import_fixer.js` na raiz — remover quando não necessário
+- [ ] **DT-009** `public/data/*.csv` são arquivos legados — limpar após validar que nada os lê
 
 ---
 
 ## FASE 1 — Fundação (Prioridade Alta)
 
 ### 1.1 Autenticação e Segurança
-- [✅] **TASK-001** Instalar NextAuth.js v5 + adapter PostgreSQL
+- [✅] **TASK-001** Instalar NextAuth.js v5 + adapter PostgreSQL — 2026-03-31
   - Provider Credentials (email + senha com bcrypt)
   - Provider Google OAuth (opcional)
   - Migration: tabelas `users`, `accounts`, `sessions`
-- [✅] **TASK-002** Criar `middleware.ts` — proteção de rotas
+- [✅] **TASK-002** Criar `middleware.ts` — proteção de rotas — 2026-03-31
   - Público: `/login`, `/cadastro`, `/esqueci-senha`
   - Protegido: `/(app)/*`
-- [✅] **TASK-003** Criar páginas de autenticação com UI refinada
+- [✅] **TASK-003** Criar páginas de autenticação com UI refinada — 2026-03-31
   - `/login`, `/cadastro`, `/esqueci-senha`
-- [✅] **TASK-004** Roles: `ADMIN`, `ADVISOR`, `CLIENT`
+- [✅] **TASK-004** Roles: `ADMIN`, `ADVISOR`, `CLIENT` — 2026-03-31
   - Coluna `role` na tabela `users`
-  - Guard nos endpoints de API
-- [ ] **TASK-005** Headers de segurança no `next.config.ts`
-  - HSTS, CSP, X-Frame-Options, X-Content-Type-Options
-  - Rate limiting: 5 req/min nas rotas de auth
+  - Guard nos endpoints de API (`requireAuth`)
+- [✅] **TASK-004b** Headers de segurança no `next.config.ts` — 2026-04-04
+  - X-Frame-Options: DENY
+  - X-Content-Type-Options: nosniff
+  - Strict-Transport-Security (HSTS)
+  - Content-Security-Policy
+  - Referrer-Policy, Permissions-Policy
+- [ ] **TASK-005** Rate limiting: 5 req/min nas rotas de auth
 
 ---
 

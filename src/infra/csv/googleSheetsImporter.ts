@@ -1,12 +1,8 @@
-import path from 'path';
 import { getSheetsService, extractSpreadsheetId } from '../../lib/googleSheets';
 import { Position } from '../../core/domain/position';
 import { ImportResult, PortfolioImportMetrics } from '../../core/domain/portfolio';
 import { validatePosition } from '../../core/domain/validation';
-import { writeCsv } from './csv-writer';
 import { buildPositionFromRaw, detectAssetClassBySheetName } from './positionMapper';
-
-const OUTPUT_FOLDER = 'public/data';
 
 function toRawRow(header: string[], row: Array<unknown>): Record<string, unknown> {
   const obj: Record<string, unknown> = {};
@@ -79,66 +75,6 @@ export async function importPositionsFromGoogleSheet(spreadsheetUrl: string): Pr
   }
 
   const totalValue = aggregatedPositions.reduce((acc, pos) => acc + (pos.valorAtualBruto ?? pos.grossValue ?? 0), 0);
-
-  const perAssetClassFileMapping: Record<string, string> = {
-    ACAO_BR: 'acoes.csv',
-    BDR: 'bdr.csv',
-    ETF_BR: 'etf.csv',
-    FII: 'fundos.csv',
-    FUNDO: 'fundos.csv',
-    RENDA_FIXA: 'renda-fixa.csv',
-    ACAO_EUA: 'acoes-eua.csv',
-    ETF_EUA: 'etf-eua.csv',
-    REIT: 'reits.csv',
-    CRIPTO: 'cripto.csv',
-    POUPANCA: 'poupanca.csv',
-    PREVIDENCIA: 'previdencia.csv',
-    ALTERNATIVO: 'alternativo.csv',
-  };
-
-  const recordsByClass: Record<string, Position[]> = {};
-  aggregatedPositions.forEach((position) => {
-    const classe = (position.assetClass || position.classe) as string;
-    if (!recordsByClass[classe]) recordsByClass[classe] = [];
-    recordsByClass[classe].push(position);
-  });
-
-  for (const [assetClassKey, records] of Object.entries(recordsByClass)) {
-    const filename = perAssetClassFileMapping[assetClassKey] ?? `${assetClassKey.toLowerCase()}.csv`;
-    await writeCsv(path.join(OUTPUT_FOLDER, filename), records, [
-      'id',
-      'nome',
-      'classe',
-      'ticker',
-      'descricao',
-      'instituicao',
-      'conta',
-      'quantidade',
-      'precoMedio',
-      'valorAtualBruto',
-      'valorAtualBrl',
-      'moedaOriginal',
-      'dataEntrada',
-      'dataVencimento',
-    ]);
-  }
-
-  await writeCsv(path.join(OUTPUT_FOLDER, 'portfolio-positions.csv'), aggregatedPositions, [
-    'id',
-    'nome',
-    'classe',
-    'ticker',
-    'descricao',
-    'instituicao',
-    'conta',
-    'quantidade',
-    'precoMedio',
-    'valorAtualBruto',
-    'valorAtualBrl',
-    'moedaOriginal',
-    'dataEntrada',
-    'dataVencimento',
-  ]);
 
   return {
     positions: aggregatedPositions,
