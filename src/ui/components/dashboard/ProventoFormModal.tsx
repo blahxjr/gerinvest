@@ -4,7 +4,6 @@ import { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Provento, ProventoInput, TIPOS_PROVENTO, TIPO_PROVENTO_LABELS, proventoSchema } from '@/core/domain/provento';
-import { formatBRL } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +13,6 @@ import {
 } from '@/ui/components/ui/dialog';
 import { Button } from '@/ui/components/ui/button';
 import { Input } from '@/ui/components/ui/input';
-import { Label } from '@/ui/components/ui/label';
 import {
   Select,
   SelectContent,

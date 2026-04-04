@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useTransition } from 'react';
 import { Position } from '@/core/domain/position';
 import { AssetClass } from '@/core/domain/types';
 import EditPositionModal from './EditPositionModal';
@@ -18,6 +18,7 @@ const ITEMS_PER_PAGE = 25;
 
 export default function PositionsTable({ positions }: Props) {
   const [editingPosition, setEditingPosition] = useState<Position | null>(null);
+  const [isFiltering, startTransition] = useTransition();
   const [filters, setFilters] = useState({
     assetClass: [] as AssetClass[],
     institution: [] as string[],
@@ -44,6 +45,10 @@ export default function PositionsTable({ positions }: Props) {
 
   const uniqueAssetClasses = [...new Set(positions.map(p => p.assetClass || p.classe).filter(Boolean))];
   const uniqueInstitutions = [...new Set(positions.map(p => p.institution || p.instituicao || 'Outros'))];
+  const totalValue = useMemo(
+    () => positions.reduce((sum, q) => sum + (q.grossValue ?? q.valorAtualBruto ?? 0), 0),
+    [positions],
+  );
 
   if (positions.length === 0) {
     return (
@@ -53,6 +58,19 @@ export default function PositionsTable({ positions }: Props) {
         description="Faça a importação da carteira para habilitar análises e gráficos."
         action={{ label: 'Ir para importação', onClick: () => { window.location.href = '/upload'; } }}
       />
+    );
+  }
+
+  if (isFiltering) {
+    return (
+      <section className="rounded-xl border border-white/10 bg-slate-800 p-4 shadow-lg">
+        <h3 className="text-lg font-semibold text-sky-300 mb-3">Tabela de posições</h3>
+        <div className="space-y-2">
+          {Array.from({ length: 8 }).map((_, idx) => (
+            <div key={idx} className="h-9 rounded-md bg-slate-700/60 animate-pulse" />
+          ))}
+        </div>
+      </section>
     );
   }
 
@@ -66,14 +84,26 @@ export default function PositionsTable({ positions }: Props) {
           type="text"
           placeholder="Buscar por ticker ou descrição..."
           value={filters.search}
-          onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            startTransition(() => {
+              setCurrentPage(1);
+              setFilters((prev) => ({ ...prev, search: value }));
+            });
+          }}
           className="w-full rounded-md bg-slate-700 border-slate-600 text-slate-100 p-2"
         />
         <div className="flex space-x-4">
           <select
             multiple
             value={filters.assetClass}
-            onChange={(e) => setFilters({ ...filters, assetClass: Array.from(e.target.selectedOptions, o => o.value as AssetClass) })}
+            onChange={(e) => {
+              const value = Array.from(e.target.selectedOptions, (o) => o.value as AssetClass);
+              startTransition(() => {
+                setCurrentPage(1);
+                setFilters((prev) => ({ ...prev, assetClass: value }));
+              });
+            }}
             className="rounded-md bg-slate-700 border-slate-600 text-slate-100 p-2"
           >
             {uniqueAssetClasses.map(ac => <option key={ac} value={ac}>{ac}</option>)}
@@ -81,7 +111,13 @@ export default function PositionsTable({ positions }: Props) {
           <select
             multiple
             value={filters.institution}
-            onChange={(e) => setFilters({ ...filters, institution: Array.from(e.target.selectedOptions, o => o.value) })}
+            onChange={(e) => {
+              const value = Array.from(e.target.selectedOptions, (o) => o.value);
+              startTransition(() => {
+                setCurrentPage(1);
+                setFilters((prev) => ({ ...prev, institution: value }));
+              });
+            }}
             className="rounded-md bg-slate-700 border-slate-600 text-slate-100 p-2"
           >
             {uniqueInstitutions.map(inst => <option key={inst} value={inst}>{inst}</option>)}
@@ -108,7 +144,6 @@ export default function PositionsTable({ positions }: Props) {
             {paginatedPositions.map((p) => {
               const price = p.price ?? p.precoMedio ?? 0;
               const grossValue = p.grossValue ?? p.valorAtualBruto ?? 0;
-              const totalValue = positions.reduce((sum, q) => sum + (q.grossValue ?? q.valorAtualBruto ?? 0), 0);
               
               return (
               <tr key={p.id} className="border-b border-white/10 hover:bg-slate-900">
@@ -149,14 +184,14 @@ export default function PositionsTable({ positions }: Props) {
         <p className="text-slate-300">Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredPositions.length)} de {filteredPositions.length} posições</p>
         <div className="space-x-2">
           <button
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            onClick={() => startTransition(() => setCurrentPage(Math.max(1, currentPage - 1)))}
             disabled={currentPage === 1}
             className="px-3 py-1 bg-slate-600 text-slate-100 rounded disabled:opacity-50"
           >
             Anterior
           </button>
           <button
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            onClick={() => startTransition(() => setCurrentPage(Math.min(totalPages, currentPage + 1)))}
             disabled={currentPage === totalPages}
             className="px-3 py-1 bg-slate-600 text-slate-100 rounded disabled:opacity-50"
           >

@@ -54,8 +54,9 @@ export default function EditPositionModal({ position, onClose }: Props) {
 
       router.refresh();
       onClose();
-    } catch (err: any) {
-      setErrors({ general: err.message });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro inesperado ao salvar';
+      setErrors({ general: message });
     } finally {
       setLoading(false);
     }
