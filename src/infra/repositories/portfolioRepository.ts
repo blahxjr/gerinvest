@@ -7,4 +7,6 @@ export interface PortfolioRepository {
   getPositionsByAssetClass(assetClass: AssetClass): Promise<Position[]>;
   getSummary(): Promise<PortfolioSummary>;
   getLastImportDate?(): Promise<string | undefined>;
+  updatePosition?(id: string, updates: Partial<Position>): Promise<Position>;
+  deletePosition?(id: string): Promise<void>;
 }

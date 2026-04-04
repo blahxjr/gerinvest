@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/authGuard';
-import { CsvPortfolioRepository } from '@/infra/repositories/csvPortfolioRepository';
+import { getPortfolioRepository } from '@/infra/repositories/postgresPortfolioRepository';
 import {
-  getPortfolioSummary,
   getAllocationByAssetClass,
   getAllocationByInstitution,
   getTopPositions,
@@ -17,7 +16,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const repo = new CsvPortfolioRepository();
+    const repo = getPortfolioRepository();
     const positions = await repo.getAllPositions();
     const summary = await repo.getSummary();
     const lastImportDate = await repo.getLastImportDate?.();

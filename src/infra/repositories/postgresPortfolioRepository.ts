@@ -7,6 +7,8 @@
 import { Pool, QueryResult } from 'pg';
 import { Carteira, Ativo, PosicaoDB, CreateCarteiraInput, CreateAtivoInput, CreatePosicaoInput } from '@/core/domain/entities';
 import { ClasseAtivo, SubclasseAtivo, Currency } from '@/core/domain/types';
+import { Position } from '@/core/domain/position';
+import { PortfolioSummary } from '@/core/domain/portfolio';
 
 export class PostgresPortfolioRepository {
   private pool: Pool;
@@ -210,6 +212,85 @@ export class PostgresPortfolioRepository {
    * ========== POSIÇÕES ==========
    */
 
+  async getAllPositions(filters?: { classe?: ClasseAtivo; instituicao?: string }): Promise<Position[]> {
+    const where: string[] = [];
+    const values: unknown[] = [];
+
+    if (filters?.classe) {
+      values.push(filters.classe);
+      where.push(`a.classe = $${values.length}`);
+    }
+
+    if (filters?.instituicao) {
+      values.push(filters.instituicao);
+      where.push(`p.instituicao = $${values.length}`);
+    }
+
+    const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+
+    const query = `
+      SELECT
+        p.id,
+        a.classe,
+        a.subclasse,
+        COALESCE(a.ticker, '') as ticker,
+        a.nome,
+        a.nome as descricao,
+        p.instituicao,
+        p.conta,
+        p.quantidade,
+        p.preco_medio as "precoMedio",
+        p.valor_atual_bruto as "valorAtualBruto",
+        p.valor_atual_brl as "valorAtualBrl",
+        p.moeda_original as "moedaOriginal",
+        a.indexador,
+        p.data_vencimento as "dataVencimento",
+        a.benchmark,
+        a.metadata,
+        p.atualizado_em as "atualizadoEm"
+      FROM posicoes p
+      JOIN ativos a ON a.id = p.ativo_id
+      ${whereClause}
+      ORDER BY p.atualizado_em DESC
+    `;
+
+    const result = await this.pool.query(query, values);
+    return result.rows.map((row) => this.mapRowToPosition(row));
+  }
+
+  async getPositionsByAssetClass(classe: ClasseAtivo): Promise<Position[]> {
+    return this.getAllPositions({ classe });
+  }
+
+  async getPositionsByInstitution(instituicao: string): Promise<Position[]> {
+    return this.getAllPositions({ instituicao });
+  }
+
+  async getSummary(filters?: { classe?: ClasseAtivo; instituicao?: string }): Promise<PortfolioSummary> {
+    const positions = await this.getAllPositions(filters);
+    const totalInvested = positions.reduce((acc, p) => acc + (p.valorAtualBrl ?? p.grossValue ?? 0), 0);
+    const uniqueTickers = new Set(positions.map((p) => p.ticker || p.nome)).size;
+    const uniqueAccounts = new Set(positions.map((p) => p.conta || p.account).filter(Boolean)).size;
+    const uniqueInstitutions = new Set(positions.map((p) => p.instituicao || p.institution).filter(Boolean)).size;
+
+    return {
+      totalInvested,
+      totalPositions: positions.length,
+      uniqueTickers,
+      uniqueAccounts,
+      uniqueInstitutions,
+    };
+  }
+
+  async getLastImportDate(): Promise<string | undefined> {
+    const query = `SELECT MAX(atualizado_em) as "maxDate" FROM posicoes`;
+    const result = await this.pool.query(query);
+    const value = result.rows[0]?.maxDate as Date | string | undefined;
+    if (!value) return undefined;
+    const asDate = typeof value === 'string' ? new Date(value) : value;
+    return asDate.toISOString();
+  }
+
   async createPosicao(input: CreatePosicaoInput): Promise<PosicaoDB> {
     const query = `
       INSERT INTO posicoes (carteira_id, ativo_id, quantidade, preco_medio, valor_atual_bruto, valor_atual_brl, moeda_original, instituicao, conta, custodia, data_entrada, data_vencimento)
@@ -362,6 +443,85 @@ export class PostgresPortfolioRepository {
   /**
    * ========== UTILITÁRIOS ==========
    */
+
+  private mapRowToPosition(row: Record<string, unknown>): Position {
+    const classe = this.normalizeClasse(String(row.classe || 'ALTERNATIVO'));
+    const valorAtualBrl = this.toNumber(row.valorAtualBrl);
+    const valorAtualBruto = this.toNumber(row.valorAtualBruto);
+    const quantidade = this.toOptionalNumber(row.quantidade);
+    const precoMedio = this.toOptionalNumber(row.precoMedio);
+    const moeda = this.normalizeCurrency(String(row.moedaOriginal || 'BRL'));
+
+    return {
+      id: String(row.id),
+      classe,
+      subclasse: row.subclasse as SubclasseAtivo | undefined,
+      ticker: this.toOptionalString(row.ticker),
+      nome: this.toOptionalString(row.nome) || 'Sem nome',
+      descricao: this.toOptionalString(row.descricao),
+      instituicao: this.toOptionalString(row.instituicao),
+      conta: this.toOptionalString(row.conta),
+      quantidade,
+      precoMedio,
+      valorAtualBruto,
+      valorAtualBrl,
+      moedaOriginal: moeda,
+      dataVencimento: this.toOptionalString(row.dataVencimento),
+      benchmark: this.toOptionalString(row.benchmark),
+      assetClass: classe,
+      description: this.toOptionalString(row.descricao),
+      institution: this.toOptionalString(row.instituicao),
+      account: this.toOptionalString(row.conta),
+      quantity: quantidade,
+      price: precoMedio,
+      grossValue: valorAtualBruto,
+      currency: moeda,
+      indexer: this.toOptionalString(row.indexador),
+      maturityDate: this.toOptionalString(row.dataVencimento),
+    };
+  }
+
+  private toNumber(value: unknown): number {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private toOptionalNumber(value: unknown): number | undefined {
+    if (value === null || value === undefined || value === '') return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  private toOptionalString(value: unknown): string | undefined {
+    if (value === null || value === undefined) return undefined;
+    const str = String(value).trim();
+    return str.length > 0 ? str : undefined;
+  }
+
+  private normalizeClasse(value: string): ClasseAtivo {
+    const allowed: ClasseAtivo[] = [
+      'ACAO_BR',
+      'FII',
+      'ETF_BR',
+      'BDR',
+      'ACAO_EUA',
+      'ETF_EUA',
+      'REIT',
+      'FUNDO',
+      'CRIPTO',
+      'RENDA_FIXA',
+      'POUPANCA',
+      'PREVIDENCIA',
+      'ALTERNATIVO',
+    ];
+    return allowed.includes(value as ClasseAtivo) ? (value as ClasseAtivo) : 'ALTERNATIVO';
+  }
+
+  private normalizeCurrency(value: string): Currency {
+    if (value === 'USD' || value === 'EUR' || value === 'BRL') return value;
+    return 'BRL';
+  }
 
   private parseAtivo(row: any): Ativo {
     return {

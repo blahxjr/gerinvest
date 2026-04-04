@@ -4,9 +4,26 @@ import { FormEvent, useState } from 'react';
 
 type UploadResponse = {
   success: boolean;
+  preview?: boolean;
   totalCount?: number;
   totalValue?: number;
-  perAssetClass?: Array<{ assetClass: string; importedCount: number; importedValue: number; errors: { row: number; message: string; }[]}>;
+  perAssetClass?: Array<{ classe: string; importedCount: number; importedValue: number; errors: { row: number; message: string; }[]}>;
+  previewRows?: Array<{
+    id: string;
+    ticker: string;
+    nome: string;
+    classe: string;
+    instituicao: string;
+    conta: string;
+    quantidade: number;
+    preco: number;
+    valor: number;
+  }>;
+  persisted?: {
+    inserted: number;
+    updated: number;
+    skipped: number;
+  };
   error?: string;
 };
 
@@ -17,6 +34,7 @@ export default function UploadForm() {
   const [result, setResult] = useState<UploadResponse | null>(null);
   const [editableJson, setEditableJson] = useState<string>('');
   const [sheetUrl, setSheetUrl] = useState<string>('');
+  const [excelPreviewReady, setExcelPreviewReady] = useState(false);
 
   async function callUploadApi(endpoint: string, body: FormData | { spreadsheetUrl: string }) {
     let response;
@@ -46,10 +64,11 @@ export default function UploadForm() {
     }
 
     setStatus('uploading');
-    setMessage('Enviando arquivo...');
+    setMessage('Enviando para o PostgreSQL...');
 
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('previewOnly', 'false');
 
     try {
       const response = await fetch('/api/upload-positions', {
@@ -69,10 +88,54 @@ export default function UploadForm() {
       setResult(data);
       setEditableJson(JSON.stringify(data, null, 2));
       setStatus('done');
-      setMessage(`Importação concluída: ${data.totalCount} posições carregadas.`);
+      setMessage(
+        `Importação concluída: ${data.totalCount} posições processadas. Inseridas: ${data.persisted?.inserted ?? 0}, atualizadas: ${data.persisted?.updated ?? 0}, ignoradas: ${data.persisted?.skipped ?? 0}.`
+      );
+      setExcelPreviewReady(false);
     } catch (error) {
       setStatus('error');
       setMessage('Falha ao enviar o arquivo.');
+    }
+  }
+
+  async function handleExcelPreview() {
+    if (!file) {
+      setMessage('Selecione um arquivo .xlsx antes de validar.');
+      setStatus('error');
+      return;
+    }
+
+    setStatus('uploading');
+    setMessage('Validando e montando prévia da planilha...');
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('previewOnly', 'true');
+
+    try {
+      const response = await fetch('/api/upload-positions', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data: UploadResponse = await response.json();
+
+      if (!response.ok || !data.success) {
+        setStatus('error');
+        setMessage(data.error || 'Erro ao validar arquivo');
+        setResult(data);
+        setExcelPreviewReady(false);
+        return;
+      }
+
+      setResult(data);
+      setStatus('done');
+      setExcelPreviewReady(true);
+      setMessage('Prévia gerada. Confira a tabela e clique em "Confirmar envio ao PostgreSQL".');
+    } catch {
+      setStatus('error');
+      setExcelPreviewReady(false);
+      setMessage('Falha ao validar a planilha.');
     }
   }
 
@@ -120,13 +183,23 @@ export default function UploadForm() {
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             className="w-full rounded border border-white/10 bg-slate-800 text-slate-100 p-2"
           />
-          <button
-            type="submit"
-            disabled={!file || status === 'uploading'}
-            className="rounded bg-sky-500 px-4 py-2 font-semibold text-white hover:bg-sky-400 disabled:opacity-50"
-          >
-            {status === 'uploading' ? 'Processando...' : 'Enviar planilha'}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleExcelPreview}
+              disabled={!file || status === 'uploading'}
+              className="rounded bg-indigo-500 px-4 py-2 font-semibold text-white hover:bg-indigo-400 disabled:opacity-50"
+            >
+              {status === 'uploading' ? 'Processando...' : 'Validar planilha'}
+            </button>
+            <button
+              type="submit"
+              disabled={!file || status === 'uploading' || !excelPreviewReady}
+              className="rounded bg-sky-500 px-4 py-2 font-semibold text-white hover:bg-sky-400 disabled:opacity-50"
+            >
+              {status === 'uploading' ? 'Processando...' : 'Confirmar envio ao PostgreSQL'}
+            </button>
+          </div>
         </form>
 
         <form onSubmit={handleSheetSubmit} className="space-y-4">
@@ -159,11 +232,47 @@ export default function UploadForm() {
             <p>Detalhamento por classe:</p>
             <ul className="list-disc ml-5">
               {result.perAssetClass?.map((item) => (
-                <li key={item.assetClass}>
-                  {item.assetClass}: {item.importedCount} itens ({item.importedValue.toFixed(2)}). Erros: {item.errors.length}
+                <li key={item.classe}>
+                  {item.classe}: {item.importedCount} itens ({item.importedValue.toFixed(2)}). Erros: {item.errors.length}
                 </li>
               ))}
             </ul>
+
+            {result.previewRows && result.previewRows.length > 0 && (
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-semibold text-slate-200">Prévia para conferência (até 20 linhas):</p>
+                <div className="overflow-x-auto rounded border border-white/10">
+                  <table className="min-w-full text-left text-xs text-slate-200">
+                    <thead className="bg-slate-700/70 text-slate-100">
+                      <tr>
+                        <th className="px-2 py-2">Ticker</th>
+                        <th className="px-2 py-2">Nome</th>
+                        <th className="px-2 py-2">Classe</th>
+                        <th className="px-2 py-2">Instituição</th>
+                        <th className="px-2 py-2">Conta</th>
+                        <th className="px-2 py-2 text-right">Qtd</th>
+                        <th className="px-2 py-2 text-right">Preço</th>
+                        <th className="px-2 py-2 text-right">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.previewRows.map((row) => (
+                        <tr key={row.id} className="border-t border-white/10">
+                          <td className="px-2 py-2">{row.ticker}</td>
+                          <td className="px-2 py-2">{row.nome}</td>
+                          <td className="px-2 py-2">{row.classe}</td>
+                          <td className="px-2 py-2">{row.instituicao}</td>
+                          <td className="px-2 py-2">{row.conta}</td>
+                          <td className="px-2 py-2 text-right">{row.quantidade}</td>
+                          <td className="px-2 py-2 text-right">R$ {row.preco.toFixed(2)}</td>
+                          <td className="px-2 py-2 text-right">R$ {row.valor.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             <div className="mt-4">
               <label className="block text-sm text-slate-200 mb-2">Editar posições manualmente (JSON):</label>

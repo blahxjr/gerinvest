@@ -1,15 +1,10 @@
-import fs from 'fs/promises';
-import path from 'path';
 import { read, utils, WorkSheet } from 'xlsx';
 import { Position } from '../../core/domain/position';
 import { ImportResult, PortfolioImportMetrics } from '../../core/domain/portfolio';
 import { ClasseAtivo } from '../../core/domain/types';
 import { validatePosition } from '../../core/domain/validation';
-import { writeCsv } from './csv-writer';
 import { RawRow, buildPositionFromRaw, detectAssetClassBySheetName } from './positionMapper';
 import { normalizeCurrency, normalizeNumber, normalizeString } from './helpers';
-
-const OUTPUT_FOLDER = 'public/data';
 
 function getCellValue(row: RawRow, candidates: string[]): string {
   const keys = Object.keys(row);
@@ -152,72 +147,6 @@ export async function importPositionsFromExcel(buffer: Buffer | ArrayBuffer): Pr
   }
 
   const totalValue = aggregatedPositions.reduce((acc, pos) => acc + (pos.valorAtualBruto ?? pos.grossValue ?? 0), 0);
-
-  // Write per-sheet CSVs and consolidated CSV
-  const byAssetClass: Record<string, Position[]> = {};
-
-  aggregatedPositions.forEach((position) => {
-    const classe = (position.assetClass || position.classe) as ClasseAtivo;
-    if (!byAssetClass[classe]) {
-      byAssetClass[classe] = [];
-    }
-    byAssetClass[classe].push(position);
-  });
-
-  const perAssetClassFilenames: Record<string, string> = {
-    ACAO_BR: 'acoes.csv',
-    BDR: 'bdr.csv',
-    ETF_BR: 'etf.csv',
-    FII: 'fundos.csv',
-    FUNDO: 'fundos.csv',
-    RENDA_FIXA: 'renda-fixa.csv',
-    ACAO_EUA: 'acoes-eua.csv',
-    ETF_EUA: 'etf-eua.csv',
-    REIT: 'reits.csv',
-    CRIPTO: 'cripto.csv',
-    POUPANCA: 'poupanca.csv',
-    PREVIDENCIA: 'previdencia.csv',
-    ALTERNATIVO: 'alternativo.csv',
-  };
-
-  for (const classe of Object.keys(byAssetClass)) {
-    const records = byAssetClass[classe] || [];
-    const filename = perAssetClassFilenames[classe] ?? `${classe.toLowerCase()}.csv`;
-
-    await writeCsv(path.join(OUTPUT_FOLDER, filename), records, [
-      'id',
-      'nome',
-      'classe',
-      'ticker',
-      'descricao',
-      'instituicao',
-      'conta',
-      'quantidade',
-      'precoMedio',
-      'valorAtualBruto',
-      'valorAtualBrl',
-      'moedaOriginal',
-      'dataEntrada',
-      'dataVencimento',
-    ]);
-  }
-
-  await writeCsv(path.join(OUTPUT_FOLDER, 'portfolio-positions.csv'), aggregatedPositions, [
-    'id',
-    'nome',
-    'classe',
-    'ticker',
-    'descricao',
-    'instituicao',
-    'conta',
-    'quantidade',
-    'precoMedio',
-    'valorAtualBruto',
-    'valorAtualBrl',
-    'moedaOriginal',
-    'dataEntrada',
-    'dataVencimento',
-  ]);
 
   const metrics = Object.values(perAssetClass);
 

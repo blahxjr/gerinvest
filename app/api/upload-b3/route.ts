@@ -1,8 +1,27 @@
 import { pool } from "@/lib/db";
 import { parse } from "csv-parse/sync";
 import { createHash } from "crypto";
+import path from "path";
+import { writeCsv } from "@/infra/csv/csv-writer";
+import type { Position } from "@/core/domain/position";
+import type { ClasseAtivo } from "@/core/domain/types";
 
 export const runtime = "nodejs";
+
+const PORTFOLIO_CSV = path.join(process.cwd(), "public", "data", "portfolio-positions.csv");
+
+function mapB3TipoToClasse(tipo: string): ClasseAtivo {
+  const map: Record<string, ClasseAtivo> = {
+    ACAO: "ACAO_BR",
+    BDR: "BDR",
+    ETF: "ETF_BR",
+    FII: "FII",
+    FIAGRO: "FII",
+    TESOURO: "RENDA_FIXA",
+    RENDA_FIXA: "RENDA_FIXA",
+  };
+  return map[tipo] ?? "ALTERNATIVO";
+}
 
 type CsvRow = Record<string, string>;
 
@@ -84,6 +103,7 @@ import { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
   const client = await pool.connect();
+  const parsedPositions: Position[] = [];
 
   try {
     const formData = await req.formData();
@@ -277,6 +297,26 @@ export async function POST(req: NextRequest) {
 
         if (insertPosicao.rows.length) {
           inseridos++;
+          // Coleta posição para sincronizar com portfolio-positions.csv
+          const classe = mapB3TipoToClasse(tipoInvestimento);
+          const grossVal = valorLiquido ?? (quantidade ?? 0) * (precoFechamento ?? 0);
+          parsedPositions.push({
+            id: `B3-${codigo}-${dataReferencia}`,
+            classe,
+            assetClass: classe,
+            nome: nomeProduto,
+            ticker: codigo,
+            description: nomeProduto,
+            quantidade: quantidade ?? undefined,
+            quantity: quantidade ?? undefined,
+            precoMedio: precoFechamento ?? undefined,
+            price: precoFechamento ?? undefined,
+            valorAtualBruto: grossVal,
+            grossValue: grossVal,
+            valorAtualBrl: grossVal,
+            moedaOriginal: "BRL",
+            currency: "BRL",
+          });
         } else {
           ignorados++;
         }
@@ -291,6 +331,22 @@ export async function POST(req: NextRequest) {
     }
 
     await client.query("COMMIT");
+
+    // Sincroniza posições importadas com portfolio-positions.csv para o dashboard
+    if (parsedPositions.length > 0) {
+      try {
+        const { CsvPortfolioRepository } = await import("@/infra/repositories/csvPortfolioRepository");
+        const repo = new CsvPortfolioRepository(PORTFOLIO_CSV);
+        const existing = await repo.getAllPositions().catch(() => []);
+
+        // Mescla: remove posições B3 antigas, inclui as novas
+        const nonB3 = existing.filter((p) => !p.id?.startsWith("B3-"));
+        const merged = [...nonB3, ...parsedPositions];
+        await writeCsv(PORTFOLIO_CSV, merged);
+      } catch (csvErr) {
+        console.warn("Importação OK no Postgres, mas falha ao sincronizar CSV:", csvErr);
+      }
+    }
 
     return Response.json({
       ok: true,

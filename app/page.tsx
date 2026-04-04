@@ -3,9 +3,8 @@ import AllocationCharts from '@/ui/components/dashboard/AllocationCharts';
 import DistributionCharts from '@/ui/components/dashboard/DistributionCharts';
 import PositionsTable from '@/ui/components/dashboard/PositionsTable';
 import DashboardClient from '@/ui/components/dashboard/DashboardClient';
-import { CsvPortfolioRepository } from '@/infra/repositories/csvPortfolioRepository';
+import { getPortfolioRepository } from '@/infra/repositories/postgresPortfolioRepository';
 import {
-  getPortfolioSummary,
   getAllocationByAssetClass,
   getAllocationByInstitution,
   getTopPositions,
@@ -16,16 +15,16 @@ import { unstable_cache } from 'next/cache';
 
 const getCachedPositions = unstable_cache(
   async () => {
-    const repo = new CsvPortfolioRepository();
+    const repo = getPortfolioRepository();
     return repo.getAllPositions().catch(() => []);
   },
-  ['portfolio-positions'],
+  ['portfolio-positions-sql'],
   { revalidate: 60 } // revalida a cada 60s
 );
 
 const getCachedSummary = unstable_cache(
   async () => {
-    const repo = new CsvPortfolioRepository();
+    const repo = getPortfolioRepository();
     return repo.getSummary().catch(() => ({
       totalInvested: 0,
       totalPositions: 0,
@@ -34,16 +33,16 @@ const getCachedSummary = unstable_cache(
       uniqueInstitutions: 0,
     }));
   },
-  ['portfolio-summary'],
+  ['portfolio-summary-sql'],
   { revalidate: 60 }
 );
 
 const getCachedLastImportDate = unstable_cache(
   async () => {
-    const repo = new CsvPortfolioRepository();
+    const repo = getPortfolioRepository();
     return repo.getLastImportDate?.().catch(() => undefined);
   },
-  ['portfolio-last-import'],
+  ['portfolio-last-import-sql'],
   { revalidate: 60 }
 );
 
