@@ -1,4 +1,4 @@
-import { read, utils, WorkSheet } from 'xlsx';
+import ExcelJS from 'exceljs';
 import { Position } from '../../core/domain/position';
 import { ImportResult, PortfolioImportMetrics } from '../../core/domain/portfolio';
 import { ClasseAtivo } from '../../core/domain/types';
@@ -93,13 +93,38 @@ function parseSheetToPositions(sheetName: string, rows: RawRow[]): Position[] {
   return output;
 }
 
-function parseSheetRows(sheet: WorkSheet): RawRow[] {
-  const rows = utils.sheet_to_json<RawRow>(sheet, { defval: '' });
+function parseSheetRows(worksheet: ExcelJS.Worksheet): RawRow[] {
+  const rows: RawRow[] = [];
+  const headerRow = worksheet.getRow(1);
+  const headers: string[] = [];
+
+  headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+    headers[colNumber - 1] = String(cell.value ?? '').trim();
+  });
+
+  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber === 1) return;
+    const rowData: RawRow = {};
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      const header = headers[colNumber - 1];
+      if (header) {
+        const val = cell.value;
+        rowData[header] = val instanceof Date ? val.toISOString() : (val ?? '');
+      }
+    });
+    rows.push(rowData);
+  });
+
   return rows;
 }
 
 export async function importPositionsFromExcel(buffer: Buffer | ArrayBuffer): Promise<ImportResult> {
-  const workbook = read(buffer, { type: Buffer.isBuffer(buffer) ? 'buffer' : 'array' });
+  const workbook = new ExcelJS.Workbook();
+  const buf: Buffer = Buffer.isBuffer(buffer)
+    ? (buffer as Buffer)
+    : Buffer.from(new Uint8Array(buffer as ArrayBuffer));
+  // exceljs types use pre-generic Buffer; cast via unknown to satisfy type checker
+  await workbook.xlsx.load(buf as unknown as Parameters<typeof workbook.xlsx.load>[0]);
   const aggregatedPositions: Position[] = [];
 
   const perAssetClass: Record<string, PortfolioImportMetrics> = {
@@ -118,13 +143,12 @@ export async function importPositionsFromExcel(buffer: Buffer | ArrayBuffer): Pr
     ALTERNATIVO: { classe: 'ALTERNATIVO', importedCount: 0, importedValue: 0, errors: [] },
   };
 
-  for (const sheetName of workbook.SheetNames) {
+  for (const worksheet of workbook.worksheets) {
+    const sheetName = worksheet.name;
     if (!sheetName) continue;
     const normalizedName = sheetName.trim();
-    const sheet = workbook.Sheets[sheetName];
-    if (!sheet) continue;
 
-    const rows = parseSheetRows(sheet);
+    const rows = parseSheetRows(worksheet);
     const sheetPositions = parseSheetToPositions(normalizedName, rows);
 
     sheetPositions.forEach((position, idx) => {

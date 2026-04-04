@@ -39,6 +39,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Arquivos sensíveis / temporários
+base64.txt
+tmp_*.js
+*.tmp
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
