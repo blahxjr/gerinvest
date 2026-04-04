@@ -2,7 +2,6 @@
 
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Position } from '@/core/domain/position';
-import { AllocationEntry } from '@/core/domain/portfolio';
 
 type Props = {
   positions: Position[];
@@ -13,9 +12,13 @@ type Props = {
 const formatBRL = (value: number) =>
   value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const formatPercent = (value: number) => `${value.toFixed(2)}%`;
+type ChartTooltipProps = {
+  active?: boolean;
+  payload?: Array<{ payload: { value?: number; grossValue?: number } }>;
+  label?: string;
+};
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
@@ -27,7 +30,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export default function DistributionCharts({ positions, topPositions, fixedVsVariable }: Props) {
+export default function DistributionCharts({ topPositions, fixedVsVariable }: Props) {
   // Simular evolução histórica (placeholder, pois não há dados reais)
   const historicalData = [
     { date: '2023-01', value: 50000 },

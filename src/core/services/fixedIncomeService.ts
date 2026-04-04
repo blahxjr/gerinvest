@@ -35,7 +35,7 @@ export interface FixedIncomeRecommendation {
  */
 export function analyzeFixedIncome(positions: Position[]): FixedIncomeAnalysisResult {
   // Filtrar apenas renda fixa
-  const rf = positions.filter((p) => p.classe === 'RENDA_FIXA' || (p.assetClass === 'RENDA_FIXA' as any));
+  const rf = positions.filter((p) => p.classe === 'RENDA_FIXA' || p.assetClass === 'RENDA_FIXA');
 
   if (rf.length === 0) {
     return {

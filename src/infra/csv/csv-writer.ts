@@ -16,8 +16,9 @@ export async function writeCsv<T>(filePath: string, rows: T[], headers?: string[
   const lines = [computedHeaders.join(',')];
 
   for (const row of rows) {
+    const rowRecord = row as Record<string, unknown>;
     const line = computedHeaders
-      .map((header) => escapeCsvValue((row as any)[header]))
+      .map((header) => escapeCsvValue(rowRecord[header]))
       .join(',');
     lines.push(line);
   }

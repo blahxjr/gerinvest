@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Ativo, ClasseAtivo, CreatePosicaoInput } from '@/core/domain/entities';
+import { Ativo, CreatePosicaoInput, Currency } from '@/core/domain/entities';
 
 type PosicaoFormProps = {
   onSubmit: (data: CreatePosicaoInput) => Promise<void>;
@@ -92,7 +92,7 @@ export default function PosicaoForm({
         quantidade: form.quantidade,
         precoMedio: form.precoMedio,
         valorAtualBrl: form.valorAtualBrl,
-        moedaOriginal: form.moedaOriginal as any,
+        moedaOriginal: form.moedaOriginal as Currency,
         instituicao: form.instituicao.trim() || undefined,
         conta: form.conta.trim() || undefined,
         custodia: form.custodia.trim() || undefined,

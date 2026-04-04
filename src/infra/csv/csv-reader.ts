@@ -9,11 +9,11 @@ const REQUIRED_COLUMN_GROUPS = [
   ['grossValue', 'valorAtualBrl', 'valorAtualBruto'],
 ];
 
-export async function readCsv<T>(filePath: string, mapper: (row: any) => T): Promise<{ data: T[]; errors: string[] }> {
+export async function readCsv<T>(filePath: string, mapper: (row: Record<string, unknown>) => T): Promise<{ data: T[]; errors: string[] }> {
   try { await fs.access(filePath); } catch { return { data: [], errors: ['Arquivo não encontrado'] }; }
   
   const content = await fs.readFile(filePath, 'utf-8');
-  const records = parse(content, { columns: true, skip_empty_lines: true, trim: true });
+  const records = parse(content, { columns: true, skip_empty_lines: true, trim: true }) as Record<string, unknown>[];
   
   if (records.length === 0) return { data: [], errors: ['CSV vazio'] };
   
@@ -25,7 +25,7 @@ export async function readCsv<T>(filePath: string, mapper: (row: any) => T): Pro
   }
   
   const errors: string[] = [];
-  const data = records.map((row: any, i: number) => {
+  const data = records.map((row: Record<string, unknown>, i: number) => {
     try { return mapper(row); }
     catch (e) { errors.push(`Linha ${i + 2}: ${String(e)}`); return null; }
   }).filter(Boolean) as T[];

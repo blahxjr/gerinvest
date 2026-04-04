@@ -31,7 +31,7 @@ export interface FundRecommendation {
  */
 export function analyzeFunds(positions: Position[]): FundAnalysisResult {
   // Filtrar apenas fundos
-  const funds = positions.filter((p) => p.classe === 'FUNDO' || (p.assetClass === 'FUNDO' as any));
+  const funds = positions.filter((p) => p.classe === 'FUNDO' || p.assetClass === 'FUNDO');
 
   if (funds.length === 0) {
     return {
@@ -251,7 +251,7 @@ function calculateFundDiversificationScore(
 
   // HHI por categoria
   const categoryPercentages = Object.values(allocationByCategory).map((a) => a.percentage / 100);
-  let hhi = categoryPercentages.reduce((sum, p) => sum + p * p, 0);
+  const hhi = categoryPercentages.reduce((sum, p) => sum + p * p, 0);
 
   const minHhi = 1 / Object.keys(allocationByCategory).length;
   const score = ((1 - hhi) / (1 - minHhi)) * 100;

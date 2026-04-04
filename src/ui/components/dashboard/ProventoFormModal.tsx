@@ -34,8 +34,7 @@ export function ProventoFormModal({ open, onClose, onSaved, initial }: Props) {
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<ProventoInput>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(proventoSchema) as any,
+    resolver: zodResolver(proventoSchema),
     defaultValues: {
       tipo: initial?.tipo ?? 'DIVIDENDO',
       ticker: initial?.ticker ?? '',

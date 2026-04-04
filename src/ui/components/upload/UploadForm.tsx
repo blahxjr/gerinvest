@@ -97,7 +97,7 @@ export default function UploadForm() {
         `Importação concluída: ${data.totalCount} posições processadas. Inseridas: ${data.persisted?.inserted ?? 0}, atualizadas: ${data.persisted?.updated ?? 0}, ignoradas: ${data.persisted?.skipped ?? 0}.`
       );
       setExcelPreviewReady(false);
-    } catch (error) {
+    } catch {
       setStatus('error');
       setMessage('Falha ao enviar o arquivo.');
     }
@@ -178,7 +178,7 @@ export default function UploadForm() {
         setStatus('error');
         setMessage('Nenhuma posição encontrada na planilha.');
       }
-    } catch (error) {
+    } catch {
       setStatus('error');
       setMessage('Falha ao importar do Google Sheets.');
     }

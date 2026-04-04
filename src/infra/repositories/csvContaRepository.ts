@@ -12,7 +12,7 @@ interface Conta {
 
 const DEFAULT_CONTAS_CSV = path.join('public', 'data', 'contas.csv');
 
-const mapRowToConta = (row: Record<string, any>): Conta => {
+const mapRowToConta = (row: Record<string, unknown>): Conta => {
   return {
     id: String(row.id),
     nome: String(row.nome),

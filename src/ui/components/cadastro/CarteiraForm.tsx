@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Carteira, CreateCarteiraInput } from '@/core/domain/entities';
+import { Carteira, CreateCarteiraInput, Currency } from '@/core/domain/entities';
 
 type CarteiraFormProps = {
   onSubmit: (data: CreateCarteiraInput) => Promise<void>;
@@ -46,7 +46,7 @@ export default function CarteiraForm({ onSubmit, onCancel, initialData, isLoadin
         nome: form.nome.trim(),
         descricao: form.descricao.trim() || undefined,
         perfil: form.perfil,
-        moedaBase: form.moedaBase as any,
+        moedaBase: form.moedaBase as Currency,
       });
     } finally {
       setSubmitting(false);
@@ -114,7 +114,7 @@ export default function CarteiraForm({ onSubmit, onCancel, initialData, isLoadin
           <select
             id="moedaBase"
             value={form.moedaBase}
-            onChange={(e) => setForm({ ...form, moedaBase: e.target.value as any })}
+            onChange={(e) => setForm({ ...form, moedaBase: e.target.value as Currency })}
             className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-700 text-white"
             disabled={isLoading || submitting}
           >

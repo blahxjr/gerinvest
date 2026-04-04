@@ -57,7 +57,7 @@ export class PostgresPortfolioRepository {
 
   async updateCarteira(id: string, input: Partial<CreateCarteiraInput>): Promise<Carteira> {
     const fields: string[] = [];
-    const values: any[] = [id];
+    const values: unknown[] = [id];
     let paramCount = 2;
 
     if (input.nome) {
@@ -162,7 +162,7 @@ export class PostgresPortfolioRepository {
 
   async updateAtivo(id: string, input: Partial<CreateAtivoInput>): Promise<Ativo> {
     const fields: string[] = [];
-    const values: any[] = [id];
+    const values: unknown[] = [id];
     let paramCount = 2;
 
     const fieldMap: Record<string, string> = {
@@ -345,7 +345,7 @@ export class PostgresPortfolioRepository {
 
   async updatePosicao(id: string, input: Partial<CreatePosicaoInput>): Promise<PosicaoDB> {
     const fields: string[] = [];
-    const values: any[] = [id];
+    const values: unknown[] = [id];
     let paramCount = 2;
 
     const fieldMap: Record<string, string> = {
@@ -427,11 +427,16 @@ export class PostgresPortfolioRepository {
     const resumo = await this.getResumoCarteira(carteiraId);
     const totalBrl = resumo.totalBrl;
 
-    const allocation: Record<string, any> = {};
-    result.rows.forEach((row: any) => {
-      allocation[row.classe] = {
-        totalBrl: parseFloat(row.total_brl) || 0,
-        percentual: totalBrl > 0 ? ((parseFloat(row.total_brl) || 0) / totalBrl) * 100 : 0,
+    const allocation: Record<ClasseAtivo, { totalBrl: number; percentual: number; posicoesCont: number }> = {} as Record<
+      ClasseAtivo,
+      { totalBrl: number; percentual: number; posicoesCont: number }
+    >;
+    result.rows.forEach((row: { classe: string; total_brl: string; posicoes_cont: string }) => {
+      const classe = this.normalizeClasse(row.classe);
+      const totalClasse = parseFloat(row.total_brl) || 0;
+      allocation[classe] = {
+        totalBrl: totalClasse,
+        percentual: totalBrl > 0 ? (totalClasse / totalBrl) * 100 : 0,
         posicoesCont: parseInt(row.posicoes_cont) || 0,
       };
     });
@@ -522,10 +527,25 @@ export class PostgresPortfolioRepository {
     return 'BRL';
   }
 
-  private parseAtivo(row: any): Ativo {
+  private parseAtivo(row: Record<string, unknown>): Ativo {
     return {
-      ...row,
-      metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
+      id: String(row.id),
+      ticker: typeof row.ticker === 'string' ? row.ticker : undefined,
+      nome: String(row.nome ?? ''),
+      classe: this.normalizeClasse(String(row.classe ?? 'ALTERNATIVO')),
+      subclasse: row.subclasse as SubclasseAtivo | undefined,
+      pais: typeof row.pais === 'string' ? row.pais : undefined,
+      moeda: this.normalizeCurrency(String(row.moeda ?? 'BRL')),
+      setor: typeof row.setor === 'string' ? row.setor : undefined,
+      segmento: typeof row.segmento === 'string' ? row.segmento : undefined,
+      benchmark: typeof row.benchmark === 'string' ? row.benchmark : undefined,
+      indexador: typeof row.indexador === 'string' ? row.indexador : undefined,
+      metadata:
+        typeof row.metadata === 'string'
+          ? (JSON.parse(row.metadata) as Record<string, unknown>)
+          : (row.metadata as Record<string, unknown> | undefined),
+      criadoEm: new Date(String(row.criadoEm ?? row.criado_em ?? new Date().toISOString())),
+      atualizadoEm: new Date(String(row.atualizadoEm ?? row.atualizado_em ?? new Date().toISOString())),
     };
   }
 

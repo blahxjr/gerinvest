@@ -28,7 +28,7 @@ export interface FiiRecommendation {
  */
 export function analyzeFiis(positions: Position[]): FiiAnalysisResult {
   // Filtrar apenas FIIs
-  const fiis = positions.filter((p) => p.classe === 'FII' || (p.assetClass === 'FII' as any));
+  const fiis = positions.filter((p) => p.classe === 'FII' || p.assetClass === 'FII');
 
   if (fiis.length === 0) {
     return {

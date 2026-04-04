@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { AssetClass, ClasseAtivo } from '../../core/domain/types';
+import { AssetClass, ClasseAtivo, Currency } from '../../core/domain/types';
 import { Position } from '../../core/domain/position';
 import { PortfolioSummary } from '../../core/domain/portfolio';
 import { PortfolioRepository } from './portfolioRepository';
@@ -12,7 +12,7 @@ const DEFAULT_POSITIONS_CSV = path.join('public', 'data', 'portfolio-positions.c
 const FALLBACK_POSITIONS_CSV = path.join('docs', 'csvs', 'portfolio-positions.csv');
 const DOCS_CSVS_FOLDER = path.join('docs', 'csvs');
 
-const mapRowToPosition = (row: Record<string, any>): Position => {
+const mapRowToPosition = (row: Record<string, unknown>): Position => {
   const assetClass = (row.classe || row.assetClass || 'ALTERNATIVO') as ClasseAtivo;
   const grossValue = normalizeCurrency(row.grossValue || row.valorAtualBruto || 0);
   const valorAtualBrl = normalizeCurrency(row.valorAtualBrl || grossValue || 0);
@@ -35,8 +35,8 @@ const mapRowToPosition = (row: Record<string, any>): Position => {
     valorAtualBruto: grossValue,
     grossValue: grossValue,
     valorAtualBrl: valorAtualBrl,
-    moedaOriginal: (row.moedaOriginal || row.currency || 'BRL') as any,
-    currency: (row.currency || 'BRL') as any,
+    moedaOriginal: (row.moedaOriginal || row.currency || 'BRL') as Currency,
+    currency: (row.currency || 'BRL') as Currency,
     dataEntrada: row.dataEntrada ? String(row.dataEntrada) : undefined,
     maturityDate: row.maturityDate ? String(row.maturityDate) : undefined,
     indexer: row.indexer ? String(row.indexer) : undefined,

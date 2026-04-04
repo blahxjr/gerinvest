@@ -12,7 +12,7 @@ interface Cliente {
 
 const DEFAULT_CLIENTES_CSV = path.join('public', 'data', 'clientes.csv');
 
-const mapRowToCliente = (row: Record<string, any>): Cliente => {
+const mapRowToCliente = (row: Record<string, unknown>): Cliente => {
   return {
     id: String(row.id),
     nome: String(row.nome),

@@ -14,7 +14,13 @@ const formatBRL = (value: number) =>
 
 const formatPercent = (value: number) => `${value.toFixed(2)}%`;
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+type ChartTooltipProps = {
+  active?: boolean;
+  payload?: Array<{ payload: { value: number; percentage: number } }>;
+  label?: string;
+};
+
+const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (

@@ -36,7 +36,9 @@ export interface CryptoRecommendation {
  */
 export function analyzeCrypto(positions: Position[]): CryptoAnalysisResult {
   // Filtrar apenas criptos
-  const cryptos = positions.filter((p) => p.classe === 'CRIPTO' || (p.assetClass === 'CRYPTO' as any));
+  const cryptos = positions.filter(
+    (p) => p.classe === 'CRIPTO' || String(p.assetClass ?? '').toUpperCase() === 'CRYPTO',
+  );
 
   if (cryptos.length === 0) {
     return {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ClasseAtivo, SubclasseAtivo, CreateAtivoInput } from '@/core/domain/entities';
+import { ClasseAtivo, SubclasseAtivo, CreateAtivoInput, Currency } from '@/core/domain/entities';
 
 type AtivoFormProps = {
   onSubmit: (data: CreateAtivoInput) => Promise<void>;
@@ -69,7 +69,7 @@ export default function AtivoForm({ onSubmit, onCancel, isLoading = false }: Ati
     subclasse: undefined as SubclasseAtivo | undefined,
     setor: '',
     pais: 'Brasil',
-    moeda: 'BRL' as any,
+    moeda: 'BRL' as Currency,
     segmento: '',
     indexador: '',
     metadata: '',
@@ -251,7 +251,7 @@ export default function AtivoForm({ onSubmit, onCancel, isLoading = false }: Ati
           <select
             id="moeda"
             value={form.moeda}
-            onChange={(e) => setForm({ ...form, moeda: e.target.value as any })}
+            onChange={(e) => setForm({ ...form, moeda: e.target.value as Currency })}
             className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-700 text-white"
             disabled={isLoading || submitting}
           >

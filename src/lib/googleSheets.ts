@@ -5,6 +5,8 @@ export type GoogleSheetsCredentials = {
   private_key: string;
 };
 
+type PartialCredentials = Partial<GoogleSheetsCredentials>;
+
 function repairServiceAccountJson(jsonStr: string): string {
   // Corrige casos em que o private_key foi codificado com quebras de linha literais.
   // Ex: "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
@@ -27,8 +29,11 @@ function getCredentialFromEnv(): GoogleSheetsCredentials {
   if (credentialsB64) {
     try {
       const jsonStr = Buffer.from(credentialsB64, 'base64').toString('utf-8');
-      let creds: any = JSON.parse(jsonStr);
+      const creds = JSON.parse(jsonStr) as PartialCredentials;
       console.log('[googleSheets] Credenciais decodificadas com sucesso');
+      if (!creds.client_email || !creds.private_key) {
+        throw new Error('Credenciais incompletas no JSON base64');
+      }
       return {
         client_email: creds.client_email,
         private_key: creds.private_key,
@@ -38,8 +43,11 @@ function getCredentialFromEnv(): GoogleSheetsCredentials {
       try {
         const jsonStr = Buffer.from(credentialsB64, 'base64').toString('utf-8');
         const repaired = repairServiceAccountJson(jsonStr);
-        const creds: any = JSON.parse(repaired);
+        const creds = JSON.parse(repaired) as PartialCredentials;
         console.log('[googleSheets] Credenciais reparadas e decodificadas com sucesso');
+        if (!creds.client_email || !creds.private_key) {
+          throw new Error('Credenciais incompletas no JSON reparado');
+        }
         return {
           client_email: creds.client_email,
           private_key: creds.private_key,
