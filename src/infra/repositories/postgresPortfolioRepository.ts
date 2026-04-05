@@ -25,18 +25,27 @@ export class PostgresPortfolioRepository {
 
   async createCarteira(input: CreateCarteiraInput): Promise<Carteira> {
     const query = `
-      INSERT INTO carteiras (nome, descricao, perfil, moeda_base)
-      VALUES ($1, $2, $3, $4)
-      RETURNING id, nome, descricao, perfil, moeda_base as "moedaBase", 
+      INSERT INTO carteiras (nome, descricao, perfil, moeda_base, cliente_id, conta_referencia_id)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, nome, descricao, perfil, moeda_base as "moedaBase",
+                cliente_id as "clienteId", conta_referencia_id as "contaReferenciaId",
                 criado_em as "criadoEm", atualizado_em as "atualizadoEm"
     `;
-    const result = await this.pool.query(query, [input.nome, input.descricao, input.perfil, input.moedaBase]);
+    const result = await this.pool.query(query, [
+      input.nome,
+      input.descricao,
+      input.perfil,
+      input.moedaBase,
+      input.clienteId,
+      input.contaReferenciaId,
+    ]);
     return result.rows[0];
   }
 
   async getAllCarteiras(): Promise<Carteira[]> {
     const query = `
-      SELECT id, nome, descricao, perfil, moeda_base as "moedaBase",
+          SELECT id, nome, descricao, perfil, moeda_base as "moedaBase",
+            cliente_id as "clienteId", conta_referencia_id as "contaReferenciaId",
              criado_em as "criadoEm", atualizado_em as "atualizadoEm"
       FROM carteiras
       ORDER BY criado_em DESC
@@ -47,7 +56,8 @@ export class PostgresPortfolioRepository {
 
   async getCarteiraById(id: string): Promise<Carteira | null> {
     const query = `
-      SELECT id, nome, descricao, perfil, moeda_base as "moedaBase",
+          SELECT id, nome, descricao, perfil, moeda_base as "moedaBase",
+            cliente_id as "clienteId", conta_referencia_id as "contaReferenciaId",
              criado_em as "criadoEm", atualizado_em as "atualizadoEm"
       FROM carteiras WHERE id = $1
     `;
@@ -80,6 +90,16 @@ export class PostgresPortfolioRepository {
       values.push(input.moedaBase);
       paramCount++;
     }
+    if (input.clienteId !== undefined) {
+      fields.push(`cliente_id = $${paramCount}`);
+      values.push(input.clienteId);
+      paramCount++;
+    }
+    if (input.contaReferenciaId !== undefined) {
+      fields.push(`conta_referencia_id = $${paramCount}`);
+      values.push(input.contaReferenciaId);
+      paramCount++;
+    }
 
     if (fields.length === 0) {
       return this.getCarteiraById(id) as Promise<Carteira>;
@@ -90,6 +110,7 @@ export class PostgresPortfolioRepository {
       SET ${fields.join(', ')}
       WHERE id = $1
       RETURNING id, nome, descricao, perfil, moeda_base as "moedaBase",
+                cliente_id as "clienteId", conta_referencia_id as "contaReferenciaId",
                 criado_em as "criadoEm", atualizado_em as "atualizadoEm"
     `;
     const result = await this.pool.query(query, values);
@@ -218,40 +239,43 @@ export class PostgresPortfolioRepository {
 
     if (filters?.classe) {
       values.push(filters.classe);
-      where.push(`a.classe = $${values.length}`);
+      where.push(`v.classe = $${values.length}`);
     }
 
     if (filters?.instituicao) {
       values.push(filters.instituicao);
-      where.push(`p.instituicao = $${values.length}`);
+      where.push(`v.instituicao_nome = $${values.length}`);
     }
 
     const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
 
     const query = `
       SELECT
-        p.id,
-        a.classe,
-        a.subclasse,
-        COALESCE(a.ticker, '') as ticker,
-        a.nome,
-        a.nome as descricao,
-        p.instituicao,
-        p.conta,
-        p.quantidade,
-        p.preco_medio as "precoMedio",
-        p.valor_atual_bruto as "valorAtualBruto",
-        p.valor_atual_brl as "valorAtualBrl",
-        p.moeda_original as "moedaOriginal",
+        v.posicao_id as id,
+        v.classe,
+        v.subclasse,
+        COALESCE(v.ticker, '') as ticker,
+        v.ativo_nome as nome,
+        v.ativo_nome as descricao,
+        v.cliente_nome as "clienteNome",
+        v.carteira_nome as "carteiraNome",
+        COALESCE(v.instituicao_nome, '') as instituicao,
+        COALESCE(v.conta_apelido, v.numero_conta, '') as conta,
+        v.conta_apelido as "contaApelido",
+        v.quantidade,
+        v.preco_medio as "precoMedio",
+        v.valor_atual_bruto as "valorAtualBruto",
+        v.valor_atual_brl as "valorAtualBrl",
+        v.moeda_original as "moedaOriginal",
         a.indexador,
-        p.data_vencimento as "dataVencimento",
+        v.data_vencimento as "dataVencimento",
         a.benchmark,
         a.metadata,
-        p.atualizado_em as "atualizadoEm"
-      FROM posicoes p
-      JOIN ativos a ON a.id = p.ativo_id
+        v.atualizado_em as "atualizadoEm"
+      FROM vw_posicoes_relacionais v
+      JOIN ativos a ON a.id = v.ativo_id
       ${whereClause}
-      ORDER BY p.atualizado_em DESC
+      ORDER BY v.atualizado_em DESC
     `;
 
     const result = await this.pool.query(query, values);
@@ -272,6 +296,8 @@ export class PostgresPortfolioRepository {
     const uniqueTickers = new Set(positions.map((p) => p.ticker || p.nome)).size;
     const uniqueAccounts = new Set(positions.map((p) => p.conta || p.account).filter(Boolean)).size;
     const uniqueInstitutions = new Set(positions.map((p) => p.instituicao || p.institution).filter(Boolean)).size;
+    const uniqueClients = new Set(positions.map((p) => p.clienteNome).filter(Boolean)).size;
+    const uniquePortfolios = new Set(positions.map((p) => p.carteiraNome).filter(Boolean)).size;
 
     return {
       totalInvested,
@@ -279,6 +305,8 @@ export class PostgresPortfolioRepository {
       uniqueTickers,
       uniqueAccounts,
       uniqueInstitutions,
+      uniqueClients,
+      uniquePortfolios,
     };
   }
 
@@ -293,16 +321,26 @@ export class PostgresPortfolioRepository {
 
   async createPosicao(input: CreatePosicaoInput): Promise<PosicaoDB> {
     const query = `
-      INSERT INTO posicoes (carteira_id, ativo_id, quantidade, preco_medio, valor_atual_bruto, valor_atual_brl, moeda_original, instituicao, conta, custodia, data_entrada, data_vencimento)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      RETURNING id, carteira_id as "carteiraId", ativo_id as "ativoId", quantidade, preco_medio as "precoMedio",
+      INSERT INTO posicoes (
+        carteira_id, ativo_id, cliente_id, instituicao_id, conta_id,
+        quantidade, preco_medio, valor_atual_bruto, valor_atual_brl, moeda_original,
+        instituicao, conta, custodia, data_entrada, data_vencimento, origem_dado, importado_em
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+      RETURNING id, carteira_id as "carteiraId", ativo_id as "ativoId",
+                cliente_id as "clienteId", instituicao_id as "instituicaoId", conta_id as "contaId",
+                quantidade, preco_medio as "precoMedio",
                 valor_atual_bruto as "valorAtualBruto", valor_atual_brl as "valorAtualBrl", moeda_original as "moedaOriginal",
                 instituicao, conta, custodia, data_entrada as "dataEntrada", data_vencimento as "dataVencimento",
+                origem_dado as "origemDado", importado_em as "importadoEm",
                 atualizado_em as "atualizadoEm"
     `;
     const result = await this.pool.query(query, [
       input.carteiraId,
       input.ativoId,
+      input.clienteId,
+      input.instituicaoId,
+      input.contaId,
       input.quantidade,
       input.precoMedio,
       input.valorAtualBruto,
@@ -313,15 +351,20 @@ export class PostgresPortfolioRepository {
       input.custodia,
       input.dataEntrada,
       input.dataVencimento,
+      input.origemDado,
+      input.importadoEm,
     ]);
     return result.rows[0];
   }
 
   async getPosicoesByCarteira(carteiraId: string): Promise<PosicaoDB[]> {
     const query = `
-      SELECT id, carteira_id as "carteiraId", ativo_id as "ativoId", quantidade, preco_medio as "precoMedio",
+          SELECT id, carteira_id as "carteiraId", ativo_id as "ativoId",
+            cliente_id as "clienteId", instituicao_id as "instituicaoId", conta_id as "contaId",
+            quantidade, preco_medio as "precoMedio",
              valor_atual_bruto as "valorAtualBruto", valor_atual_brl as "valorAtualBrl", moeda_original as "moedaOriginal",
              instituicao, conta, custodia, data_entrada as "dataEntrada", data_vencimento as "dataVencimento",
+            origem_dado as "origemDado", importado_em as "importadoEm",
              atualizado_em as "atualizadoEm"
       FROM posicoes
       WHERE carteira_id = $1
@@ -333,9 +376,12 @@ export class PostgresPortfolioRepository {
 
   async getPosicaoById(id: string): Promise<PosicaoDB | null> {
     const query = `
-      SELECT id, carteira_id as "carteiraId", ativo_id as "ativoId", quantidade, preco_medio as "precoMedio",
+          SELECT id, carteira_id as "carteiraId", ativo_id as "ativoId",
+            cliente_id as "clienteId", instituicao_id as "instituicaoId", conta_id as "contaId",
+            quantidade, preco_medio as "precoMedio",
              valor_atual_bruto as "valorAtualBruto", valor_atual_brl as "valorAtualBrl", moeda_original as "moedaOriginal",
              instituicao, conta, custodia, data_entrada as "dataEntrada", data_vencimento as "dataVencimento",
+            origem_dado as "origemDado", importado_em as "importadoEm",
              atualizado_em as "atualizadoEm"
       FROM posicoes WHERE id = $1
     `;
@@ -349,6 +395,9 @@ export class PostgresPortfolioRepository {
     let paramCount = 2;
 
     const fieldMap: Record<string, string> = {
+      clienteId: 'cliente_id',
+      instituicaoId: 'instituicao_id',
+      contaId: 'conta_id',
       quantidade: 'quantidade',
       precoMedio: 'preco_medio',
       valorAtualBruto: 'valor_atual_bruto',
@@ -359,6 +408,8 @@ export class PostgresPortfolioRepository {
       custodia: 'custodia',
       dataEntrada: 'data_entrada',
       dataVencimento: 'data_vencimento',
+      origemDado: 'origem_dado',
+      importadoEm: 'importado_em',
     };
 
     for (const [key, dbField] of Object.entries(fieldMap)) {
@@ -377,9 +428,12 @@ export class PostgresPortfolioRepository {
       UPDATE posicoes
       SET ${fields.join(', ')}
       WHERE id = $1
-      RETURNING id, carteira_id as "carteiraId", ativo_id as "ativoId", quantidade, preco_medio as "precoMedio",
+      RETURNING id, carteira_id as "carteiraId", ativo_id as "ativoId",
+                cliente_id as "clienteId", instituicao_id as "instituicaoId", conta_id as "contaId",
+                quantidade, preco_medio as "precoMedio",
                 valor_atual_bruto as "valorAtualBruto", valor_atual_brl as "valorAtualBrl", moeda_original as "moedaOriginal",
                 instituicao, conta, custodia, data_entrada as "dataEntrada", data_vencimento as "dataVencimento",
+                origem_dado as "origemDado", importado_em as "importadoEm",
                 atualizado_em as "atualizadoEm"
     `;
     const result = await this.pool.query(query, values);
@@ -460,11 +514,14 @@ export class PostgresPortfolioRepository {
       id: String(row.id),
       classe,
       subclasse: row.subclasse as SubclasseAtivo | undefined,
+      clienteNome: this.toOptionalString(row.clienteNome),
+      carteiraNome: this.toOptionalString(row.carteiraNome),
       ticker: this.toOptionalString(row.ticker),
       nome: this.toOptionalString(row.nome) || 'Sem nome',
       descricao: this.toOptionalString(row.descricao),
       instituicao: this.toOptionalString(row.instituicao),
       conta: this.toOptionalString(row.conta),
+      contaApelido: this.toOptionalString(row.contaApelido),
       quantidade,
       precoMedio,
       valorAtualBruto,

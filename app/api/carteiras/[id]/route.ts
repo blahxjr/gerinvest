@@ -38,6 +38,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       descricao: body.descricao,
       perfil: body.perfil,
       moedaBase: body.moedaBase,
+      clienteId: body.clienteId,
+      contaReferenciaId: body.contaReferenciaId,
     };
 
     const repo = getPortfolioRepository();

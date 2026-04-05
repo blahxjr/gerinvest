@@ -71,6 +71,13 @@ export default function PortfolioOverview({ summary, positions, markToMarket }: 
           trend="neutral"
         />
         <KpiCard
+          label="Clientes"
+          value={summary.uniqueClients ?? new Set(positions.map((p) => p.clienteNome).filter(Boolean)).size}
+          subtitle={`${summary.uniquePortfolios ?? new Set(positions.map((p) => p.carteiraNome).filter(Boolean)).size} carteiras ativas`}
+          icon={Landmark}
+          trend="neutral"
+        />
+        <KpiCard
           label="Concentração Máx"
           value={`${topPosition?.ticker ?? 'N/A'} ${formatPercent(concentrationPct)}`}
           subtitle="posição líder"
@@ -97,7 +104,7 @@ export default function PortfolioOverview({ summary, positions, markToMarket }: 
           label="Liquidez D+0"
           value={formatCurrency(liquidezD0)}
           subtitle={`Cobertura BRAPI: ${formatPercent(coverage)}`}
-          icon={Landmark}
+          icon={CircleDollarSign}
           trend="neutral"
         />
       </div>
@@ -113,7 +120,9 @@ export default function PortfolioOverview({ summary, positions, markToMarket }: 
         <div className="glass rounded-xl p-4">
           <p className="text-xs uppercase tracking-wide text-slate-300 mb-2">Última importação</p>
           <p className="text-lg font-semibold text-white">{lastImportFormatted}</p>
-          <p className="mt-2 text-sm text-slate-300">{summary.uniqueInstitutions} instituições monitoradas</p>
+          <p className="mt-2 text-sm text-slate-300">
+            {summary.uniqueInstitutions} bancos/instituições e {summary.uniqueAccounts} contas monitoradas
+          </p>
         </div>
       </div>
 

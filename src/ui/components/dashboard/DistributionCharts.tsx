@@ -30,14 +30,21 @@ const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
   return null;
 };
 
-export default function DistributionCharts({ topPositions, fixedVsVariable }: Props) {
-  // Simular evolução histórica (placeholder, pois não há dados reais)
-  const historicalData = [
-    { date: '2023-01', value: 50000 },
-    { date: '2023-02', value: 52000 },
-    { date: '2023-03', value: 51000 },
-    { date: '2023-04', value: 53000 },
-  ];
+export default function DistributionCharts({ positions, topPositions, fixedVsVariable }: Props) {
+  const historicalData = positions
+    .filter((position) => position.dataEntrada)
+    .reduce<Record<string, number>>((acc, position) => {
+      const date = new Date(position.dataEntrada as string);
+      if (Number.isNaN(date.getTime())) return acc;
+      const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const value = position.grossValue ?? position.valorAtualBruto ?? 0;
+      acc[month] = (acc[month] ?? 0) + value;
+      return acc;
+    }, {});
+
+  const historicalSeries = Object.entries(historicalData)
+    .sort((left, right) => left[0].localeCompare(right[0]))
+    .map(([date, value]) => ({ date, value }));
 
   const top10Data = topPositions.slice(0, 10).map(pos => ({
     name: pos.ticker,
@@ -53,15 +60,21 @@ export default function DistributionCharts({ topPositions, fixedVsVariable }: Pr
     <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
       <div className="rounded-xl border border-white/10 bg-slate-800 p-4 shadow-lg">
         <h3 className="text-lg font-semibold text-sky-300 mb-3">Evolução Patrimonial</h3>
-        <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={historicalData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis dataKey="date" stroke="#9ca3af" />
-            <YAxis stroke="#9ca3af" />
-            <Tooltip content={<CustomTooltip />} />
-            <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} />
-          </LineChart>
-        </ResponsiveContainer>
+        {historicalSeries.length > 1 ? (
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={historicalSeries}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="date" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" />
+              <Tooltip content={<CustomTooltip />} />
+              <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex h-[250px] items-center justify-center rounded-lg border border-dashed border-slate-600 text-sm text-slate-300">
+            Dados insuficientes para série histórica. Inclua data de entrada nas posições.
+          </div>
+        )}
       </div>
 
       <div className="rounded-xl border border-white/10 bg-slate-800 p-4 shadow-lg">

@@ -29,6 +29,8 @@ export async function POST(req: NextRequest) {
       descricao: body.descricao,
       perfil: body.perfil,
       moedaBase: body.moedaBase || 'BRL',
+      clienteId: body.clienteId,
+      contaReferenciaId: body.contaReferenciaId,
     };
 
     if (!input.nome) {

@@ -4,11 +4,14 @@ export type Position = {
   id: string;
   classe: ClasseAtivo;
   subclasse?: SubclasseAtivo;
+  clienteNome?: string;
+  carteiraNome?: string;
   ticker?: string;
   nome: string;
   descricao?: string;
   instituicao?: string;
   conta?: string;
+  contaApelido?: string;
   custoria?: string;
   quantidade?: number;
   precoMedio?: number;

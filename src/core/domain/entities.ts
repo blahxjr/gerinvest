@@ -17,6 +17,8 @@ export type Carteira = {
   descricao?: string;
   perfil?: 'conservador' | 'moderado' | 'arrojado';
   moedaBase: Currency;
+  clienteId?: string;
+  contaReferenciaId?: string;
   criadoEm: Date;
   atualizadoEm: Date;
 };
@@ -50,6 +52,9 @@ export type PosicaoDB = {
   id: string; // UUID
   carteiraId: string; // FK → carteiras.id
   ativoId: string; // FK → ativos.id
+  clienteId?: string;
+  instituicaoId?: string;
+  contaId?: string;
   quantidade?: number;
   precoMedio?: number;
   valorAtualBruto?: number;
@@ -60,6 +65,8 @@ export type PosicaoDB = {
   custodia?: string; // Para criptos: exchange, hardware wallet, etc.
   dataEntrada?: Date;
   dataVencimento?: Date;
+  origemDado?: string;
+  importadoEm?: Date;
   atualizadoEm: Date;
 };
 

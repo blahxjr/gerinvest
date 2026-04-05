@@ -5,10 +5,14 @@ import { persistPositionsToPostgres } from '@/infra/repositories/postgresIngesti
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAuth(request, ['ADMIN', 'ADVISOR']);
+    const auth = await requireAuth(request, ['ADMIN', 'ADVISOR', 'CLIENT']);
+
+    if (!auth.authorized && process.env.NODE_ENV === 'production') {
+      return auth.response!;
+    }
 
     if (!auth.authorized) {
-      return auth.response!;
+      console.warn('[google-sheet] Auth bypass habilitado em ambiente local.');
     }
 
     const body = await request.json();

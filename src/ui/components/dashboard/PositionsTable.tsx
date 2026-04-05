@@ -21,6 +21,8 @@ export default function PositionsTable({ positions }: Props) {
   const [isFiltering, startTransition] = useTransition();
   const [filters, setFilters] = useState({
     assetClass: [] as AssetClass[],
+    cliente: [] as string[],
+    carteira: [] as string[],
     institution: [] as string[],
     search: '',
   });
@@ -29,21 +31,27 @@ export default function PositionsTable({ positions }: Props) {
   const filteredPositions = useMemo(() => {
     return positions.filter(p => {
       const assetClass = p.assetClass || p.classe;
+      const cliente = p.clienteNome || 'Não informado';
+      const carteira = p.carteiraNome || 'Não informada';
       const institution = p.institution || p.instituicao || 'Outros';
       const ticker = p.ticker || '';
-      const description = p.description || p.descricao || '';
+      const description = p.description || p.descricao || p.nome || '';
       
       if (filters.assetClass.length > 0 && assetClass && !filters.assetClass.includes(assetClass)) return false;
+      if (filters.cliente.length > 0 && !filters.cliente.includes(cliente)) return false;
+      if (filters.carteira.length > 0 && !filters.carteira.includes(carteira)) return false;
       if (filters.institution.length > 0 && !filters.institution.includes(institution)) return false;
       if (filters.search && !ticker.toLowerCase().includes(filters.search.toLowerCase()) && !description.toLowerCase().includes(filters.search.toLowerCase())) return false;
       return true;
     });
   }, [positions, filters]);
 
-  const totalPages = Math.ceil(filteredPositions.length / ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filteredPositions.length / ITEMS_PER_PAGE));
   const paginatedPositions = filteredPositions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const uniqueAssetClasses = [...new Set(positions.map(p => p.assetClass || p.classe).filter(Boolean))];
+  const uniqueClientes = [...new Set(positions.map(p => p.clienteNome || 'Não informado'))];
+  const uniqueCarteiras = [...new Set(positions.map(p => p.carteiraNome || 'Não informada'))];
   const uniqueInstitutions = [...new Set(positions.map(p => p.institution || p.instituicao || 'Outros'))];
   const totalValue = useMemo(
     () => positions.reduce((sum, q) => sum + (q.grossValue ?? q.valorAtualBruto ?? 0), 0),
@@ -93,7 +101,7 @@ export default function PositionsTable({ positions }: Props) {
           }}
           className="w-full rounded-md bg-slate-700 border-slate-600 text-slate-100 p-2"
         />
-        <div className="flex space-x-4">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
           <select
             multiple
             value={filters.assetClass}
@@ -110,6 +118,36 @@ export default function PositionsTable({ positions }: Props) {
           </select>
           <select
             multiple
+            value={filters.cliente}
+            onChange={(e) => {
+              const value = Array.from(e.target.selectedOptions, (o) => o.value);
+              startTransition(() => {
+                setCurrentPage(1);
+                setFilters((prev) => ({ ...prev, cliente: value }));
+              });
+            }}
+            className="rounded-md bg-slate-700 border-slate-600 text-slate-100 p-2"
+            aria-label="Filtrar por cliente"
+          >
+            {uniqueClientes.map((cliente) => <option key={cliente} value={cliente}>{cliente}</option>)}
+          </select>
+          <select
+            multiple
+            value={filters.carteira}
+            onChange={(e) => {
+              const value = Array.from(e.target.selectedOptions, (o) => o.value);
+              startTransition(() => {
+                setCurrentPage(1);
+                setFilters((prev) => ({ ...prev, carteira: value }));
+              });
+            }}
+            className="rounded-md bg-slate-700 border-slate-600 text-slate-100 p-2"
+            aria-label="Filtrar por carteira"
+          >
+            {uniqueCarteiras.map((carteira) => <option key={carteira} value={carteira}>{carteira}</option>)}
+          </select>
+          <select
+            multiple
             value={filters.institution}
             onChange={(e) => {
               const value = Array.from(e.target.selectedOptions, (o) => o.value);
@@ -119,6 +157,7 @@ export default function PositionsTable({ positions }: Props) {
               });
             }}
             className="rounded-md bg-slate-700 border-slate-600 text-slate-100 p-2"
+            aria-label="Filtrar por banco/instituição"
           >
             {uniqueInstitutions.map(inst => <option key={inst} value={inst}>{inst}</option>)}
           </select>
@@ -126,12 +165,16 @@ export default function PositionsTable({ positions }: Props) {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full text-left text-sm text-slate-200">
+        <table className="min-w-full text-left text-sm text-slate-200" aria-label="Tabela relacional de posições">
+          <caption className="sr-only">Posições por cliente, carteira, banco, conta e ativo</caption>
           <thead>
             <tr>
-              <th className="px-3 py-2">Ticker</th>
+              <th scope="col" className="px-3 py-2">Cliente</th>
+              <th scope="col" className="px-3 py-2">Carteira</th>
+              <th scope="col" className="px-3 py-2">Ticker</th>
               <th className="px-3 py-2">Descrição</th>
-              <th className="px-3 py-2">Instituição</th>
+              <th scope="col" className="px-3 py-2">Classe</th>
+              <th scope="col" className="px-3 py-2">Banco</th>
               <th className="px-3 py-2">Conta</th>
               <th className="px-3 py-2">Quant</th>
               <th className="px-3 py-2">Preço</th>
@@ -144,13 +187,19 @@ export default function PositionsTable({ positions }: Props) {
             {paginatedPositions.map((p) => {
               const price = p.price ?? p.precoMedio ?? 0;
               const grossValue = p.grossValue ?? p.valorAtualBruto ?? 0;
+              const clienteNome = p.clienteNome || 'Não informado';
+              const carteiraNome = p.carteiraNome || 'Não informada';
+              const classe = p.assetClass || p.classe || '-';
               
               return (
               <tr key={p.id} className="border-b border-white/10 hover:bg-slate-900">
+                <td className="px-3 py-2">{clienteNome}</td>
+                <td className="px-3 py-2">{carteiraNome}</td>
                 <td className="px-3 py-2">{p.ticker || '-'}</td>
-                <td className="px-3 py-2">{p.description || p.descricao || '-'}</td>
+                <td className="px-3 py-2">{p.description || p.descricao || p.nome || '-'}</td>
+                <td className="px-3 py-2">{classe}</td>
                 <td className="px-3 py-2">{p.institution || p.instituicao || '-'}</td>
-                <td className="px-3 py-2">{p.account || p.conta || '-'}</td>
+                <td className="px-3 py-2">{p.contaApelido || p.account || p.conta || '-'}</td>
                 <td className="px-3 py-2">{p.quantity || p.quantidade || 0}</td>
                 <td className="px-3 py-2">{formatCurrency(price)}</td>
                 <td className="px-3 py-2">{formatCurrency(grossValue)}</td>
@@ -187,6 +236,7 @@ export default function PositionsTable({ positions }: Props) {
             onClick={() => startTransition(() => setCurrentPage(Math.max(1, currentPage - 1)))}
             disabled={currentPage === 1}
             className="px-3 py-1 bg-slate-600 text-slate-100 rounded disabled:opacity-50"
+            aria-label="Página anterior"
           >
             Anterior
           </button>
@@ -194,6 +244,7 @@ export default function PositionsTable({ positions }: Props) {
             onClick={() => startTransition(() => setCurrentPage(Math.min(totalPages, currentPage + 1)))}
             disabled={currentPage === totalPages}
             className="px-3 py-1 bg-slate-600 text-slate-100 rounded disabled:opacity-50"
+            aria-label="Próxima página"
           >
             Próximo
           </button>

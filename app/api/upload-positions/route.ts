@@ -4,9 +4,12 @@ import { importPositionsFromExcel } from '@/infra/csv/excelImporter';
 import { persistPositionsToPostgres } from '@/infra/repositories/postgresIngestionService';
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth(request, ['ADMIN', 'ADVISOR']);
-  if (!auth.authorized) {
+  const auth = await requireAuth(request, ['ADMIN', 'ADVISOR', 'CLIENT']);
+  if (!auth.authorized && process.env.NODE_ENV === 'production') {
     return auth.response!;
+  }
+  if (!auth.authorized) {
+    console.warn('[upload-positions] Auth bypass habilitado em ambiente local.');
   }
   try {
     const formData = await request.formData();

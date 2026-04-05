@@ -6,6 +6,7 @@ import ImportPreviewTable, { type PreviewPosition } from './ImportPreviewTable';
 
 type UploadResponse = {
   success: boolean;
+  message?: string;
   preview?: boolean;
   totalCount?: number;
   totalValue?: number;
@@ -164,7 +165,7 @@ export default function UploadForm() {
 
       if (!data.success) {
         setStatus('error');
-        setMessage(data.error || 'Erro ao importar do Google Sheets');
+        setMessage(data.error || data.message || 'Erro ao importar do Google Sheets');
         setResult(data);
         return;
       }

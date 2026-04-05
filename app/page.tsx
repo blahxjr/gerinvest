@@ -77,6 +77,24 @@ export default async function Home() {
   const sortedAssetClass = [...allocationByAssetClass].sort((a, b) => b.percentage - a.percentage);
   const topAssetClass = sortedAssetClass[0];
   const topInstitution = allocationByInstitution[0];
+  const topClient = Object.entries(
+    (positions || []).reduce<Record<string, number>>((acc, position) => {
+      const key = (position.clienteNome || '').trim() || 'Não informado';
+      const value = position.grossValue ?? position.valorAtualBruto ?? 0;
+      acc[key] = (acc[key] ?? 0) + value;
+      return acc;
+    }, {}),
+  )
+    .sort((a, b) => b[1] - a[1])[0];
+  const topPortfolio = Object.entries(
+    (positions || []).reduce<Record<string, number>>((acc, position) => {
+      const key = (position.carteiraNome || '').trim() || 'Não informada';
+      const value = position.grossValue ?? position.valorAtualBruto ?? 0;
+      acc[key] = (acc[key] ?? 0) + value;
+      return acc;
+    }, {}),
+  )
+    .sort((a, b) => b[1] - a[1])[0];
 
   const data = {
     summary: { ...summary, lastImportDate },
@@ -107,6 +125,14 @@ export default async function Home() {
           <li>
             A instituição que mais concentra recursos é <strong>{topInstitution?.institution ?? 'N/A'}</strong> com{' '}
             <strong>{topInstitution?.percentage.toFixed(2) ?? '0.00'}%</strong>.
+          </li>
+          <li>
+            Cliente com maior patrimônio: <strong>{topClient?.[0] ?? 'N/A'}</strong> com{' '}
+            <strong>{(topClient?.[1] ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>.
+          </li>
+          <li>
+            Carteira líder: <strong>{topPortfolio?.[0] ?? 'N/A'}</strong> com{' '}
+            <strong>{(topPortfolio?.[1] ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>.
           </li>
           <li>
             Posição mais concentrada: <strong>{data.topPositions[0]?.ticker ?? 'N/A'}</strong> ({data.topPositions[0]?.grossValue?.toFixed(2) ?? '0.00'}).

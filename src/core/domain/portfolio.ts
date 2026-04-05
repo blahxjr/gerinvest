@@ -7,6 +7,8 @@ export type PortfolioSummary = {
   uniqueTickers: number;
   uniqueAccounts: number;
   uniqueInstitutions: number;
+  uniqueClients?: number;
+  uniquePortfolios?: number;
   lastImportDate?: string;
 };
 

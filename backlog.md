@@ -1,7 +1,7 @@
 # PROJINVEST — Backlog de Desenvolvimento
 
 > Atualizado em: 2026-04-04
-> Estágio atual: P5 concluído — UI Premium + lint zerado + fixes críticos de segurança e integração
+> Estágio atual: P5 concluído + modelo relacional cliente->instituicao->conta->carteira->posicao aplicado e refletido no dashboard
 
 ---
 
@@ -42,6 +42,21 @@
 | P5.1 | Hardening lint: modais, skeleton, useTransition | `d7a1ddf` | 2026-04-03 |
 | P5.2 | Lint legado zerado (0 erros, 18 warnings estruturais) | `81a699b` | 2026-04-04 |
 | P5.3 | Fixes críticos: route positions/[id], headers segurança, Google Sheets → Postgres | TBD | 2026-04-04 |
+| P5.4 | Modelo relacional em carteira/posição + cadastro manual + dashboard relacional | TBD | 2026-04-04 |
+
+---
+
+## ENTREGA INCREMENTAL — 04/04/2026
+
+- [✅] Migration `007_relational_portfolio_model.sql` criada e aplicada localmente
+- [✅] `PostgresPortfolioRepository` atualizado para view `vw_posicoes_relacionais`
+- [✅] `Position`/`PortfolioSummary` expandidos com campos relacionais (cliente/carteira/conta)
+- [✅] Rota `app/cadastro-manual-bb` criada com fluxo de cadastro relacional e quick-create de entidades
+- [✅] Dashboard revisado para refletir relações:
+  - KPIs com clientes e carteiras ativas
+  - insights de cliente líder e carteira líder
+  - tabela com filtros/colunas de cliente, carteira, banco e conta
+  - remoção de série histórica simulada no gráfico de evolução
 
 ---
 
